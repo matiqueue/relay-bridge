@@ -13,7 +13,8 @@ issue  ->  branch flow/<type>/<number>-<description>  ->  PR to dev  ->  merge  
 | `flow/<type>/<nnn>-<desc>` | one task = one issue = one branch, always from an up-to-date `dev`  |
 
 Release Please runs on `prod`: from the commits it builds a release pull request (version and changelog); merging
-it tags the release. `sync-dev.yml` then merges `prod` back into `dev`, so `dev` always carries the released version.
+it tags the release. `sync-dev.yml` then opens a `prod -> dev` pull request, so `dev` gets the released version back
+(a repository admin merges it with a merge commit: `dev` accepts changes only through pull requests).
 
 ## 1. Start with an issue
 
