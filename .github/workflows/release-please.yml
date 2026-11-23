@@ -1,0 +1,28 @@
+name: Release Please
+
+# Every push to prod (a merged dev -> prod pull request) lets Release Please open or update its release pull
+# request: the version bump and CHANGELOG.md from the Conventional Commits. Merging that pull request tags the
+# release (relay-bridge-vX.Y.Z) and publishes the GitHub release. Nothing is built or published to npm: Relay
+# Bridge is installed from a clone (README → Install). sync-dev.yml merges prod back into dev afterwards.
+
+on:
+  push:
+    branches: [prod]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          target-branch: prod

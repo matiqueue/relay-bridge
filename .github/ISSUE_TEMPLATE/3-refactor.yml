@@ -1,0 +1,77 @@
+name: ♻️ Refactor / performance
+description: Improve the shape or the speed of existing code without changing what it does.
+labels:
+  - "type: ♻️ refactor"
+  - "meta: ❓ needs triage"
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - Refactor — structure, naming, duplication
+        - Performance — time, memory, process count
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Current state
+      description: What is wrong with the code today. Measurements for performance work.
+    validations:
+      required: true
+
+  - type: textarea
+    id: target
+    attributes:
+      label: Target state
+      description: What it looks like afterwards, and how we verify nothing changed for users of the tools.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - mcp
+        - providers
+        - tasks
+        - git
+        - policy
+        - tooling
+        - not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - P1-high
+        - P2-medium
+        - P3-low
+    validations:
+      required: true
+
+  - type: dropdown
+    id: effort
+    attributes:
+      label: Effort
+      options:
+        - Small
+        - Medium
+        - Large
+    validations:
+      required: false
+
+  - type: textarea
+    id: relations
+    attributes:
+      label: Dependencies
+      description: "Optional, one per line: `Blocked by: #12`, `Part of: #3`."
+    validations:
+      required: false

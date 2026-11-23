@@ -1,0 +1,66 @@
+# The whole local check (npm run check) on every pull request and every push to dev and prod: formatting,
+# type check, lint, unit tests and the build. One Linux job.
+#
+# Relay Bridge is public, so Actions minutes are free: the suite runs on every pull request and its result is a
+# required check (.github/rulesets/pull-requests.json).
+#
+# The integration tests (npm run test:integration) need the Antigravity CLI and a signed-in account. They never run
+# here; the pull request template asks for them when the provider, the task runner or the policy changes.
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [dev, prod]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # npm ci runs "prepare" (husky): no git hooks on the runners
+  HUSKY: 0
+
+jobs:
+  check:
+    name: Checks (format, types, lint, tests, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prettier
+        run: npm run format:check
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      # The task tests create real git repositories and commits
+      - name: Git identity for test repositories
+        run: |
+          git config --global user.name "CI"
+          git config --global user.email "ci@example.invalid"
+          git config --global init.defaultBranch main
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build

@@ -1,0 +1,182 @@
+name: PR automation
+
+# Names pull requests like the issues (issue-automation.yml): the branch says the type and the issue number, the
+# title gets them as a prefix:
+#   flow/feature/001-mcp-server  "MCP server with the Antigravity provider"
+#     -> "✨ Feature: [001] MCP server with the Antigravity provider"
+# and the pull request gets the matching `type:` label. The release pull request dev -> prod becomes
+# "🚀 Release: dev → prod". The same job first checks the branch name: flow/<type>/<nnn>-<description>, <nnn> a
+# real issue (it fails the pull request otherwise), and last fills the sidebar: the author as assignee, the issue's
+# `area:`/`prio:` labels and "Closes #<nnn>" when the description lacks it.
+#
+# No checkout: nothing of the pull request runs with this write token. An `edited` event that did not touch the
+# title or the base (a description edit) never gets a runner, and the rename made here uses GITHUB_TOKEN, which
+# starts no workflow.
+
+on:
+  pull_request:
+    types: [opened, edited, reopened]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  title:
+    name: Branch name, title and type label
+    if: github.event.action != 'edited' || github.event.changes.title || github.event.changes.base
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Branch name
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const TYPES = ['feature', 'bugfix', 'refactor', 'perf', 'chore', 'docs', 'security', 'spike', 'test'];
+            const branch = context.payload.pull_request.head.ref;
+            const base = context.payload.pull_request.base.ref;
+
+            // Branches made by tools do not follow the convention
+            const EXEMPT = ['release-please--', 'dependabot/'];
+            if (branch === 'dev' || branch === 'prod' || EXEMPT.some((p) => branch.startsWith(p))) {
+              core.info(`'${branch}' is made by a tool — skipping.`);
+              return;
+            }
+
+            const fail = async (msg, hint) => {
+              await core.summary
+                .addHeading('❌ Wrong branch name', 2)
+                .addRaw(`Branch: \`${branch}\` → \`${base}\`\n\n`)
+                .addRaw(`**${msg}**\n\n${hint}\n`)
+                .write();
+              core.setFailed(msg);
+            };
+
+            const PATTERN = [
+              'Pattern: `flow/<type>/<number>-<short-description>`',
+              '',
+              'Example: `flow/feature/001-mcp-server`',
+              '',
+              `Types: ${TYPES.join(', ')}`,
+              '',
+              'The number is an existing issue, padded with zeros to 3 digits.',
+              'The description is English, lowercase, words joined with hyphens.',
+            ].join('\n');
+
+            // 3+ digits so the convention survives issue #1000
+            const m = branch.match(new RegExp(`^flow/(${TYPES.join('|')})/(\\d{3,})-([a-z0-9]+(?:-[a-z0-9]+)*)$`));
+            if (!m) return fail(`Branch name '${branch}' does not follow the convention.`, PATTERN);
+
+            const [, type, number] = m;
+            const issueNumber = parseInt(number, 10);
+            if (issueNumber === 0) return fail('The issue number cannot be zero.', PATTERN);
+
+            // The number must belong to a real issue — not a pull request, not a gap
+            let issue;
+            try {
+              issue = (await github.rest.issues.get({ ...context.repo, issue_number: issueNumber })).data;
+            } catch (e) {
+              // 404: never used; 410: deleted (GitHub never reuses the number)
+              if (e.status === 404 || e.status === 410) {
+                const what = e.status === 410 ? `Issue #${issueNumber} was deleted` : `Issue #${issueNumber} does not exist`;
+                return fail(
+                  `${what} — branch '${branch}' points at nothing.`,
+                  'Open the issue before the branch, or fix the number in the branch name.',
+                );
+              }
+              throw e;
+            }
+            if (issue.pull_request) {
+              return fail(`#${issueNumber} is a pull request, not an issue.`, 'Issues and pull requests share numbers. Use the issue number.');
+            }
+
+            // Soft check: does the branch type match the issue's type label?
+            const TYPE_LABEL = {
+              feature: 'type: ✨ feature', bugfix: 'type: 🐛 bugfix', refactor: 'type: ♻️ refactor',
+              perf: 'type: ⚡ perf', chore: 'type: 🔧 chore', docs: 'type: 📚 docs',
+              security: 'type: 🔒 security', spike: 'type: 🔍 spike', test: 'type: 🧪 test',
+            };
+            const names = issue.labels.map((l) => l.name || l);
+            const mismatch = names.some((n) => n.startsWith('type: ')) && !names.includes(TYPE_LABEL[type]);
+            core.summary
+              .addHeading('✅ Branch name OK', 2)
+              .addRaw(`\`${branch}\` → \`${base}\`\n\n`)
+              .addRaw(`Issue [#${issueNumber}](${issue.html_url}) — ${issue.title}\n`);
+            if (mismatch) {
+              const actual = names.filter((n) => n.startsWith('type: ')).join(', ');
+              core.warning(`The branch says '${type}', issue #${issueNumber} has ${actual}. Not blocking, but check it.`);
+              core.summary.addRaw(`\n⚠️ The branch type (\`${type}\`) does not match the issue label (${actual}).\n`);
+            }
+            await core.summary.write();
+
+      - name: Title and type label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const ref = { owner: context.repo.owner, repo: context.repo.repo, issue_number: pr.number };
+            const PREFIX = {
+              feature: ['✨ Feature', 'type: ✨ feature'],
+              bugfix: ['🐛 Bugfix', 'type: 🐛 bugfix'],
+              refactor: ['♻️ Refactor', 'type: ♻️ refactor'],
+              perf: ['⚡ Perf', 'type: ⚡ perf'],
+              chore: ['🔧 Chore', 'type: 🔧 chore'],
+              docs: ['📚 Docs', 'type: 📚 docs'],
+              test: ['🧪 Test', 'type: 🧪 test'],
+              security: ['🔒 Security', 'type: 🔒 security'],
+              spike: ['🔍 Spike', 'type: 🔍 spike'],
+            };
+
+            if (pr.head.ref === 'dev' && pr.base.ref === 'prod') {
+              const title = '🚀 Release: dev → prod';
+              if (pr.title !== title) await github.rest.pulls.update({ ...ref, pull_number: pr.number, title });
+              return;
+            }
+
+            const m = pr.head.ref.match(/^flow\/([a-z]+)\/(\d{3,})-/);
+            if (!m || !PREFIX[m[1]]) {
+              core.info(`'${pr.head.ref}' is not a task branch — leaving the title.`);
+              return;
+            }
+            const [, type, number] = m;
+            const [prefix, label] = PREFIX[type];
+
+            if (!/\[\d{3,}\]/.test(pr.title)) {
+              // Drop a conventional-commit prefix ("feat: ...") the author may have typed
+              const text = pr.title.replace(/^[a-z]+(\([^)]*\))?!?:\s*/i, '');
+              const title = `${prefix}: [${number}] ${text}`.trim();
+              await github.rest.pulls.update({ ...ref, pull_number: pr.number, title });
+              core.info(`Title -> ${title}`);
+            }
+
+            const labels = pr.labels.map((l) => l.name);
+            if (!labels.includes(label)) await github.rest.issues.addLabels({ ...ref, labels: [label] });
+
+      - name: Assignee, labels and linked issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const ref = { owner: context.repo.owner, repo: context.repo.repo, issue_number: pr.number };
+
+            // The branch step above has already checked that the number is an issue
+            const m = pr.head.ref.match(/^flow\/[a-z]+\/(\d{3,})-/);
+            const issue = m
+              ? (await github.rest.issues.get({ ...context.repo, issue_number: Number(m[1]) })).data
+              : null;
+
+            if (!pr.assignees.length && pr.user.type === 'User') {
+              await github.rest.issues.addAssignees({ ...ref, assignees: [pr.user.login] });
+            }
+
+            const have = pr.labels.map((l) => l.name);
+            const copy = (issue?.labels ?? [])
+              .map((l) => l.name ?? l)
+              .filter((name) => /^(area|prio): /.test(name) && !have.includes(name));
+            if (copy.length) await github.rest.issues.addLabels({ ...ref, labels: copy });
+
+            const closes = (n) => new RegExp(`\\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\\s+#${n}\\b`, 'i');
+            if (issue && !closes(issue.number).test(pr.body ?? '')) {
+              const body = `${(pr.body ?? '').trimEnd()}\n\nCloses #${issue.number}`.trimStart();
+              await github.rest.pulls.update({ ...context.repo, pull_number: pr.number, body });
+            }

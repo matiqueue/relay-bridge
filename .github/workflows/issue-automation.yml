@@ -1,0 +1,100 @@
+name: Issue automation
+
+# Triage (opened, edited). Issue forms cannot apply labels from dropdown answers — GitHub has no native mapping.
+# This job reads the rendered form body and does it instead:
+#   Area dropdown     -> area: <value>
+#   Priority dropdown -> prio: <value>
+#   Kind dropdown     -> corrects the type: label where a form is shared (performance, tests)
+# Once an area (when the form asks for one) and a priority are set, `meta: ❓ needs triage` is removed. Last, the
+# title gets the type and the number: "Status shows no progress" -> "🐛 Bugfix: [009] Status shows no progress".
+#
+# The parser reads the forms' field labels ("### Area"). Change a label in .github/ISSUE_TEMPLATE and this
+# parser must change with it, or triage silently stops applying labels.
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+
+jobs:
+  triage:
+    name: Triage
+    if: github.event.action != 'edited' || github.event.changes.title || github.event.changes.body
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Labels and title
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const TRIAGE = 'meta: ❓ needs triage';
+            const AREAS = ['mcp', 'providers', 'tasks', 'git', 'policy', 'tooling'];
+            const PRIOS = ['P0-critical', 'P1-high', 'P2-medium', 'P3-low'];
+            const issueRef = { owner: context.repo.owner, repo: context.repo.repo, issue_number: context.payload.issue.number };
+
+            // Issue forms render as "### Field label\n\nvalue".
+            const sections = {};
+            for (const chunk of (context.payload.issue.body || '').split(/^### /m).slice(1)) {
+              const nl = chunk.indexOf('\n');
+              if (nl === -1) continue;
+              sections[chunk.slice(0, nl).trim()] = chunk.slice(nl + 1).trim();
+            }
+            const values = (name) =>
+              (sections[name] || '')
+                .split(/[,\n]/)
+                .map((v) => v.trim())
+                .filter((v) => v && v !== '_No response_');
+
+            const add = new Set();
+            const remove = new Set();
+
+            for (const a of values('Area')) if (AREAS.includes(a)) add.add(`area: ${a}`);
+            if (values('Area').includes('whole repository')) AREAS.forEach((a) => add.add(`area: ${a}`));
+
+            const prio = values('Priority')[0];
+            if (PRIOS.includes(prio)) {
+              add.add(`prio: ${prio}`);
+              for (const p of PRIOS) if (p !== prio) remove.add(`prio: ${p}`);
+            }
+
+            // Shared forms: the Kind dropdown decides the real type.
+            const kind = values('Kind')[0] || '';
+            if (/^Performance/.test(kind)) {
+              add.add('type: ⚡ perf');
+              remove.add('type: ♻️ refactor');
+            } else if (/^Tests/.test(kind)) {
+              add.add('type: 🧪 test');
+              remove.add('type: 🔧 chore');
+            }
+
+            const hasArea = [...add].some((l) => l.startsWith('area: '));
+            const hasPrio = [...add].some((l) => l.startsWith('prio: '));
+            // The docs form deliberately has no Area field
+            if (hasPrio && (hasArea || !('Area' in sections))) remove.add(TRIAGE);
+
+            const current = context.payload.issue.labels.map((l) => l.name);
+            const toAdd = [...add].filter((l) => !current.includes(l));
+            const toRemove = [...remove].filter((l) => current.includes(l));
+            if (toAdd.length) await github.rest.issues.addLabels({ ...issueRef, labels: toAdd });
+            for (const name of toRemove) await github.rest.issues.removeLabel({ ...issueRef, name });
+
+            // Title last: the type may have just been swapped above. Renaming fires an `edited` event that
+            // re-runs this workflow; the [number] guard makes that second pass a no-op.
+            const PREFIX = {
+              'type: ✨ feature': '✨ Feature', 'type: 🐛 bugfix': '🐛 Bugfix', 'type: ♻️ refactor': '♻️ Refactor',
+              'type: ⚡ perf': '⚡ Perf', 'type: 🔧 chore': '🔧 Chore', 'type: 📚 docs': '📚 Docs',
+              'type: 🧪 test': '🧪 Test', 'type: 🔒 security': '🔒 Security', 'type: 🔍 spike': '🔍 Spike',
+            };
+            const title = context.payload.issue.title || '';
+            if (/\[\d{3,}\]/.test(title)) return core.info('Title already stamped.');
+
+            const finalLabels = new Set([...current, ...toAdd]);
+            for (const l of toRemove) finalLabels.delete(l);
+            const typeLabel = [...finalLabels].find((l) => l.startsWith('type: '));
+            const padded = String(context.payload.issue.number).padStart(3, '0');
+            const prefix = PREFIX[typeLabel];
+            const newTitle = prefix ? `${prefix}: [${padded}] ${title}`.trim() : `[${padded}] ${title}`.trim();
+            await github.rest.issues.update({ ...issueRef, title: newTitle });
+            core.info(`Title -> ${newTitle}`);

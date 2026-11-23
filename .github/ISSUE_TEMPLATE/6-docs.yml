@@ -1,0 +1,47 @@
+name: 📚 Documentation
+description: Documentation that is missing, wrong or out of date.
+labels:
+  - "type: 📚 docs"
+  - "meta: ❓ needs triage"
+body:
+  - type: input
+    id: where
+    attributes:
+      label: Where
+      description: The file or section.
+      placeholder: README.md → Register in Claude Code
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong or missing
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - P1-high
+        - P2-medium
+        - P3-low
+    validations:
+      required: true
+
+  - type: textarea
+    id: relations
+    attributes:
+      label: Dependencies
+      description: "Optional, one per line: `Blocked by: #12`, `Part of: #3`."
+    validations:
+      required: false

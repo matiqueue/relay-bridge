@@ -1,0 +1,6 @@
+# 1. ESLint (with type information) and Prettier on the staged files: quick, only the changes.
+npx lint-staged
+
+# 2. Types of the WHOLE project: a change in one file can break types in another one that is not staged.
+echo "→ typecheck"
+npm run typecheck --silent

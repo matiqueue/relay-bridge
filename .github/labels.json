@@ -1,0 +1,69 @@
+[
+  { "name": "type: ✨ feature", "color": "0E5FD8", "description": "New capability or enhancement" },
+  { "name": "type: 🐛 bugfix", "color": "1F6FEB", "description": "Something works incorrectly and needs fixing" },
+  { "name": "type: ♻️ refactor", "color": "3D8BFD", "description": "Code restructuring with no change in behaviour" },
+  { "name": "type: ⚡ perf", "color": "0FA5A5", "description": "Performance or resource usage improvement" },
+  { "name": "type: 📚 docs", "color": "59A5F5", "description": "Documentation, README, code comments" },
+  { "name": "type: 🔧 chore", "color": "6E8CA0", "description": "Maintenance: deps, config, build, housekeeping" },
+  { "name": "type: 🧪 test", "color": "17A2B8", "description": "Adding or improving tests, no behaviour change" },
+  {
+    "name": "type: 🔍 spike",
+    "color": "8AB4F8",
+    "description": "Research or investigation — output is a decision, not code"
+  },
+  {
+    "name": "type: 🔒 security",
+    "color": "0A3069",
+    "description": "Hardening, permissions, sandboxing, secret handling"
+  },
+  {
+    "name": "prio: P0-critical",
+    "color": "B60205",
+    "description": "Broken for everyone or data at risk — drop everything"
+  },
+  { "name": "prio: P1-high", "color": "D93F0B", "description": "Important, blocks the current milestone" },
+  { "name": "prio: P2-medium", "color": "FBCA04", "description": "Should be done, but can wait for a free slot" },
+  { "name": "prio: P3-low", "color": "0E8A16", "description": "Nice to have, no deadline" },
+  {
+    "name": "meta: ❓ needs triage",
+    "color": "EAC54F",
+    "description": "Newly opened — not yet typed, sized or prioritised"
+  },
+  {
+    "name": "meta: 💥 breaking change",
+    "color": "B45309",
+    "description": "Breaks an existing tool contract or workflow"
+  },
+  {
+    "name": "meta: 🚧 blocked",
+    "color": "C05621",
+    "description": "Waiting on an external dependency, decision or another issue"
+  },
+  { "name": "meta: ♊ duplicate", "color": "CBD5E1", "description": "Already tracked in another issue" },
+  {
+    "name": "meta: 💬 needs discussion",
+    "color": "F5A623",
+    "description": "Requires a decision before any code is written"
+  },
+  { "name": "meta: 🗑️ wontfix", "color": "9CA3AF", "description": "Valid, but intentionally will not be worked on" },
+  { "name": "area: mcp", "color": "8250DF", "description": "The MCP server, tool contracts and transport" },
+  {
+    "name": "area: providers",
+    "color": "6F42C1",
+    "description": "Agent providers: the Antigravity CLI adapter, model discovery"
+  },
+  { "name": "area: tasks", "color": "553098", "description": "Task lifecycle, persistence, recovery, concurrency" },
+  { "name": "area: git", "color": "A371F7", "description": "Repositories, worktrees, branches, commit and push facts" },
+  {
+    "name": "area: policy",
+    "color": "7C3AED",
+    "description": "Path validation, agent permissions, sandbox, redaction"
+  },
+  { "name": "area: tooling", "color": "9F7AEA", "description": "Repository tooling, CI, release automation" },
+  {
+    "name": "autorelease: pending",
+    "color": "EDEDED",
+    "description": "Release Please: release pull request not merged yet"
+  },
+  { "name": "autorelease: tagged", "color": "EDEDED", "description": "Release Please: release tagged" }
+]

@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+.local
+.relay-bridge
+.claude
+package-lock.json
+# Release Please writes these
+CHANGELOG.md
+.release-please-manifest.json

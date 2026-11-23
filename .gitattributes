@@ -1,0 +1,6 @@
+# Without this, Windows with core.autocrlf=true checks files out with CRLF: Prettier (endOfLine "lf")
+# then reports every file as changed, and the hooks in .husky/ fail in sh with "bad interpreter".
+* text=auto eol=lf
+
+# Lockfiles are huge and generated: keep them out of pull request diffs.
+package-lock.json linguist-generated=true -diff

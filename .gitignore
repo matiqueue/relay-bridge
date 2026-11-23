@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+coverage/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs
+*.log
+logs/
+
+# Local, never published: personal notes, prompts and scratch files
+.local/
+
+# Relay Bridge state when RELAY_BRIDGE_HOME points inside the checkout (tests, experiments)
+.relay-bridge/
+
+# Claude Code worktrees of this repository
+.claude/worktrees/
+.claude/settings.local.json
+
+# OS files
+.DS_Store
+._*
+Thumbs.db
+
+# IDE / editor
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*~

@@ -1,0 +1,47 @@
+name: Sync dev
+
+# After every push to prod (a merged dev -> prod pull request or a merged release pull request), merge prod back
+# into dev, so dev always has the released version and the changelog, and the next dev -> prod pull request starts
+# from it. A conflict fails this run: merge prod into dev by hand then.
+
+on:
+  push:
+    branches: [prod]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-dev
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Merge prod into dev
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Retried: a release and a dev -> prod merge can sync at the same time
+          for attempt in 1 2 3; do
+            git fetch origin prod dev
+            git reset --hard origin/dev
+            if git merge-base --is-ancestor origin/prod HEAD; then
+              echo "dev already has everything from prod." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            git merge --no-edit origin/prod -m "chore: merge prod into dev"
+            if git push origin dev; then
+              echo "Merged prod into dev." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep $((attempt * 10))
+          done
+          exit 1

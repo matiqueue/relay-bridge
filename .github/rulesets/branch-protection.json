@@ -1,0 +1,12 @@
+{
+  "name": "dev, prod: no force push or deletion",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": ["refs/heads/dev", "refs/heads/prod"],
+      "exclude": []
+    }
+  },
+  "rules": [{ "type": "deletion" }, { "type": "non_fast_forward" }]
+}

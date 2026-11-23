@@ -1,0 +1,73 @@
+name: 🔍 Spike / investigation
+description: A time-boxed investigation. The outcome is a decision, not code.
+labels:
+  - "type: 🔍 spike"
+  - "meta: ❓ needs triage"
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What do we need to find out?
+      placeholder: Can the GitHub Copilot CLI run a task non-interactively and report progress as events?
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why now
+      description: Which decision waits for the answer.
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Expected outcome
+      description: What the spike delivers (a written decision, an ADR, a prototype branch that will be thrown away).
+    validations:
+      required: true
+
+  - type: input
+    id: timebox
+    attributes:
+      label: Time box
+      placeholder: 1 day
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - mcp
+        - providers
+        - tasks
+        - git
+        - policy
+        - tooling
+        - not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - P1-high
+        - P2-medium
+        - P3-low
+    validations:
+      required: true
+
+  - type: textarea
+    id: relations
+    attributes:
+      label: Dependencies
+      description: "Optional, one per line: `Blocked by: #12`, `Part of: #3`."
+    validations:
+      required: false

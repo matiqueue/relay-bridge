@@ -1,0 +1,92 @@
+name: ✨ Feature
+description: A new capability or an extension of an existing one.
+labels:
+  - "type: ✨ feature"
+  - "meta: ❓ needs triage"
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What can the orchestrator (or the person running it) not do today, and why does it hurt?
+      placeholder: Claude cannot see which file a delegated agent is editing until the task finishes.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should happen instead. Describe behaviour and the tool contract, not code.
+      placeholder: check_agent_status shows the last tool call and the file it touched.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How we know it is done. This becomes the checklist of the pull request.
+      value: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - mcp
+        - providers
+        - tasks
+        - git
+        - policy
+        - tooling
+        - not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - P1-high
+        - P2-medium
+        - P3-low
+    validations:
+      required: true
+
+  - type: dropdown
+    id: effort
+    attributes:
+      label: Effort
+      description: Small is the same day, medium about 2 days, large about a week.
+      options:
+        - Small
+        - Medium
+        - Large
+    validations:
+      required: false
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Out of scope
+      description: Optional, but effective — what this issue deliberately does not do.
+    validations:
+      required: false
+
+  - type: textarea
+    id: relations
+    attributes:
+      label: Dependencies
+      description: "Optional, one per line. `Blocked by: #12` must be done first, `Part of: #3` is the epic this belongs to."
+      placeholder: |
+        Blocked by: #12
+        Part of: #3
+    validations:
+      required: false
