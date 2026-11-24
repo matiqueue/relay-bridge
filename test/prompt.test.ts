@@ -8,6 +8,7 @@ const modify: BriefInput = {
   workspace: "/state/worktrees/app-rb-1",
   repository: "/work/app",
   referenceDirectories: ["/work/other"],
+  temporaryDirectory: "/state/tasks/rb-1/tmp",
   git: {
     branch: "flow/feature/012-csv-export",
     baseRef: "dev",
@@ -41,6 +42,7 @@ describe("buildBrief", () => {
     const pr = buildBrief({ ...modify, git: { ...modify.git!, allowPullRequest: true } });
     expect(pr).toContain("gh pr create --draft --base dev --head flow/feature/012-csv-export");
     expect(pr).toContain("--body-file");
+    expect(pr).toContain("a file in `/state/tasks/rb-1/tmp`");
   });
 
   it("tells a read-only agent where the repository is and that its output is the report", () => {

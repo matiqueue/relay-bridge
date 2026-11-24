@@ -22,6 +22,8 @@ export interface PolicyInput {
   /** The shared .git directory, when the repository is a git repository. */
   readonly gitCommonDir: string | undefined;
   readonly referenceDirectories: readonly string[];
+  /** The run's own directory for temporary files, writable by the agent's file tools. */
+  readonly temporaryDirectory: string | undefined;
   /** Global git config files the sandboxed git must be able to read (identity, includes). */
   readonly gitConfigPaths: readonly string[];
   readonly allowCommit: boolean;
@@ -161,6 +163,7 @@ export function buildPolicy(input: PolicyInput): AgentPolicy {
   const deny: string[] = [...ALWAYS_DENIED_COMMANDS.map(command), ...ALWAYS_DENIED_REGEX.map(regex)];
 
   for (const configPath of input.gitConfigPaths) allow.push(`read_file(${configPath})`);
+  if (input.temporaryDirectory) allow.push(`write_file(${input.temporaryDirectory})`);
   for (const dir of input.referenceDirectories) {
     allow.push(`read_file(${dir})`);
     deny.push(`write_file(${dir})`);

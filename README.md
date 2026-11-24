@@ -241,7 +241,8 @@ All optional, set as environment variables of the MCP server (`claude mcp add �
 │   ├── brief.md             exactly what the agent was asked
 │   ├── report.schema.json   the report schema given to the agent
 │   ├── agent-settings.json  the run's permission policy
-│   └── workspace/           the scratch directory of read-only tasks
+│   ├── workspace/           the scratch directory of read-only tasks
+│   └── tmp/                 the agent's temporary files (e.g. a pull request description)
 └── worktrees/<repo>-<task-id>/   git worktrees of modifying tasks
 ```
 

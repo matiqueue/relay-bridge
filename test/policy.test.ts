@@ -6,6 +6,7 @@ const base: PolicyInput = {
   repository: "/work/repo",
   gitCommonDir: "/work/repo/.git",
   referenceDirectories: ["/work/reference"],
+  temporaryDirectory: "/state/tasks/rb-1/tmp",
   gitConfigPaths: ["/home/u/.gitconfig"],
   allowCommit: true,
   allowPush: true,
@@ -82,6 +83,7 @@ describe("buildPolicy (modify)", () => {
     expect(policy.allow).toContain("command(git)");
     expect(policy.allow).toContain("read_file(/home/u/.gitconfig)");
     expect(policy.allow).toContain("read_url(registry.npmjs.org)");
+    expect(policy.allow).toContain("write_file(/state/tasks/rb-1/tmp)");
     expect(denied(policy.deny, "gh pr create --draft")).toBe(true);
     expect(denied(buildPolicy({ ...base, allowPullRequest: true }).deny, "gh pr create --draft")).toBe(false);
   });

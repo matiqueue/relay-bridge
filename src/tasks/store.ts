@@ -16,6 +16,7 @@ import type { TaskRecord } from "./types.js";
  *   agent-settings.json  the run's permission policy
  *   owner.lock           which Relay Bridge process supervises the task
  *   workspace/           the empty scratch directory of read-only tasks
+ *   tmp/                 temporary files of the agent (removed with the task directory)
  * Everything is created with owner-only permissions. Repositories are never copied here.
  */
 export interface TaskPaths {
@@ -27,6 +28,8 @@ export interface TaskPaths {
   readonly schema: string;
   readonly lock: string;
   readonly scratch: string;
+  /** Temporary files of the run (a pull request description…), writable by the agent's file tools. */
+  readonly tmp: string;
 }
 
 const ID_PATTERN = /^rb-\d{8}-[a-z0-9]{6}$/;
@@ -62,6 +65,7 @@ export class TaskStore {
       schema: path.join(dir, "report.schema.json"),
       lock: path.join(dir, "owner.lock"),
       scratch: path.join(dir, "workspace"),
+      tmp: path.join(dir, "tmp"),
     };
   }
 

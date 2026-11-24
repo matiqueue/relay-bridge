@@ -448,6 +448,7 @@ export class TaskManager {
       workspace: record.workspace,
       repository: git?.repoRoot ?? record.workingDirectory,
       referenceDirectories: record.referenceDirectories,
+      temporaryDirectory: this.store.paths(record.id).tmp,
       git: git
         ? {
             branch: git.branch,
@@ -481,6 +482,7 @@ export class TaskManager {
     await writeFile(paths.brief, `${brief}\n`, { mode: 0o600 });
     await writeFile(paths.schema, `${JSON.stringify(REPORT_JSON_SCHEMA, null, 2)}\n`, { mode: 0o600 });
     if (record.mode === "read_only") await mkdir(paths.scratch, { recursive: true, mode: 0o700 });
+    await mkdir(paths.tmp, { recursive: true, mode: 0o700 });
   }
 
   // ── Scheduling and running ──────────────────────────────────────────────────────────────────────
@@ -507,6 +509,7 @@ export class TaskManager {
       repository: record.git?.repoRoot ?? record.workingDirectory,
       gitCommonDir: record.git?.commonDir,
       referenceDirectories: record.referenceDirectories,
+      temporaryDirectory: paths.tmp,
       gitConfigPaths: globalGitConfigPaths(homedir()).filter((p) => existsSync(p)),
       allowCommit: record.git?.allowCommit ?? false,
       allowPush: record.git?.allowPush ?? false,

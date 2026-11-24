@@ -11,6 +11,8 @@ export interface BriefInput {
   readonly workspace: string;
   readonly repository: string;
   readonly referenceDirectories: readonly string[];
+  /** Where temporary files go (outside the repository). */
+  readonly temporaryDirectory: string;
   readonly git:
     | {
         readonly branch: string;
@@ -59,7 +61,7 @@ function gitRules(input: BriefInput): string[] {
   }
   if (g.allowCommit && g.allowPush && g.allowPullRequest) {
     rules.push(
-      `After pushing, open a draft pull request: write its description (following the repository's pull request template if it has one) to a file in the system temporary directory, then run \`gh pr create --draft --base ${g.pullRequestBase ?? g.baseRef} --head ${g.branch} --title "<clear title>" --body-file <that file>\`. Never merge it.`,
+      `After pushing, open a draft pull request: write its description (following the repository's pull request template if it has one) to a file in \`${input.temporaryDirectory}\`, then run \`gh pr create --draft --base ${g.pullRequestBase ?? g.baseRef} --head ${g.branch} --title "<clear title>" --body-file <that file>\`. Never merge it.`,
     );
   } else {
     rules.push("Do not open a pull request.");
@@ -85,6 +87,9 @@ export function buildBrief(input: BriefInput): string {
   } else {
     where.push(`Your workspace (current directory) is \`${input.repository}\`. Make all changes here.`);
   }
+  where.push(
+    `Temporary files that are not part of the work (notes, a pull request description) go to \`${input.temporaryDirectory}\`. Your file tools cannot write anywhere else outside your workspace.`,
+  );
   if (input.referenceDirectories.length > 0) {
     where.push(
       `Reference directories you may read but never modify: ${input.referenceDirectories.map((d) => `\`${d}\``).join(", ")}.`,
