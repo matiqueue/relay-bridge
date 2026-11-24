@@ -129,8 +129,8 @@ export interface TaskRecord {
   readonly revisionOf: string | undefined;
   readonly revisionNumber: number;
   readonly revisionInstructions: string | undefined;
-  /** The conversation this run resumes, when the revision continues the previous one. */
-  readonly resumeConversationId: string | undefined;
+  /** The conversation this run resumes: a revision continuing the previous one, or a continuation (below). */
+  resumeConversationId: string | undefined;
   readonly snapshotBefore: CheckoutSnapshot | undefined;
 
   status: TaskStatus;
@@ -146,6 +146,12 @@ export interface TaskRecord {
   report: AgentReport | undefined;
   verification: GitVerification | ReadOnlyVerification | undefined;
   warnings: string[];
+  /**
+   * Headless runs end their turn without an answer when a command needs an approval nobody can give. Relay Bridge
+   * then resumes the conversation with `nextPrompt` (the command was denied, carry on without it), at most twice.
+   */
+  continuations?: number;
+  nextPrompt?: string | undefined;
 }
 
 export function emptyProgress(): TaskProgress {

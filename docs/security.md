@@ -70,9 +70,15 @@ Depending on the task: `git push` and `gh pr create` are denied unless `push` / 
 
 Allowed to run outside the sandbox without a prompt (modify): `git` (minus the above), `gh pr create/view/list/diff/
 checks/status`, `gh issue view/list`, `gh repo view`, dependency installs (`npm ci`, `npm install`, `pnpm install`,
-`yarn install`, `bun install`), plus `RELAY_BRIDGE_EXTRA_ALLOW`. Everything else runs inside the sandbox
-(`toolPermission: proceed-in-sandbox`) or, in read-only runs, is soft-denied unless it is on the read-only allow list
-(`toolPermission: request-review`; headless mode cannot ask, so it denies).
+`yarn install`, `bun install`), plus `RELAY_BRIDGE_EXTRA_ALLOW`. In read-only runs only the `gh` reading commands
+(`gh pr view/list/diff/checks`, `gh issue view/list`, `gh repo view`) may leave the sandbox — a broad list would let a
+command such as `cat` read `~/.ssh` outside it. Everything else runs inside the sandbox
+(`toolPermission: proceed-in-sandbox`), where a write to a read-only repository simply fails.
+
+A command that needs an approval nobody can give in headless mode is denied by the CLI, and Antigravity CLI 1.5.15
+then ends the agent's turn without an answer. Relay Bridge detects this, resumes the same conversation and tells the
+agent the command was denied and to finish without it (at most twice; then the task fails with the denied commands
+in its error).
 
 ### 5. Processes
 

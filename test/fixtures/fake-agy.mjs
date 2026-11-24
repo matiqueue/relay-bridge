@@ -85,9 +85,15 @@ if (process.env.FAKE_AGY_RECORD_DIR) {
   );
 }
 
+// A continuation after a denied command: carry on (or end at a denial again with FAKE_AGY_ALWAYS_DENY=1)
+const continuation = prompt.startsWith("Relay Bridge: your last turn ended");
 const markers = [...prompt.matchAll(/\[\[fake:([a-z-]+)(?::([^\]]+))?\]\]/g)];
 const scenarioMarkers = markers.filter((m) => m[1] !== "conv");
-const scenario = scenarioMarkers.at(-1)?.[1] ?? "commit";
+const scenario = continuation
+  ? process.env.FAKE_AGY_ALWAYS_DENY === "1"
+    ? "autodeny"
+    : "continued"
+  : (scenarioMarkers.at(-1)?.[1] ?? "commit");
 const scenarioArg = scenarioMarkers.at(-1)?.[2];
 const resume = flag("--conversation");
 const conversationId =
@@ -232,6 +238,24 @@ switch (scenario) {
   case "secret": {
     tool("run_command", { CommandLine: "cat config" }, "token=ghp_abcdefghijklmnopqrstuvwxyz0123456789");
     succeed(report({ summary: "Printed ghp_abcdefghijklmnopqrstuvwxyz0123456789 by mistake." }));
+    break;
+  }
+  case "autodeny": {
+    // agy 1.5.15: a command needing approval in headless mode ends the turn with SUCCESS and no response
+    tool(
+      "run_command",
+      { CommandLine: "touch /somewhere/file" },
+      'permission check failed for command "touch /somewhere/file": user denied permission to run command:',
+    );
+    emit(result({ status: "SUCCESS", response: "" }));
+    process.stderr.write(
+      'jetski: no output produced — a tool required the "command" permission that headless mode cannot prompt for, so it was auto-denied.\n',
+    );
+    process.exit(0);
+    break;
+  }
+  case "continued": {
+    succeed(report({ summary: "Continued without the denied command.", known_issues: ["touch was denied"] }));
     break;
   }
   case "noreport": {

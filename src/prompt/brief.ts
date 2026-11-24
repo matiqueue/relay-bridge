@@ -105,8 +105,8 @@ export function buildBrief(input: BriefInput): string {
     "Never print, copy or commit secrets (tokens, keys, passwords, .env contents).",
     "When something is unclear, investigate the code and docs first, then take safe, reversible steps. Escalate only decisions that are outside the task.",
     readOnly
-      ? "Shell commands run in a sandbox where the repository is read-only, and only reading commands are allowed. A command denied by policy is a decision, not an obstacle: do not look for a workaround, report it."
-      : "Shell commands run in a sandbox. Commands that need the network or the repository's shared .git directory (git commit, git push, gh, dependency installs) are pre-approved to run outside it: if one fails because of the sandbox, run it again with BypassSandbox. A command denied by policy is a decision, not an obstacle: do not look for a workaround, report it.",
+      ? "Shell commands run in a sandbox where the repository is read-only: writes there fail. Do not request BypassSandbox — leaving the sandbox is not available in read-only tasks except for `gh` reading commands. A command denied by policy is a decision, not an obstacle: do not look for a workaround, report it."
+      : "Shell commands run in a sandbox. Commands that need the network or the repository's shared .git directory (git commit, git push, gh, dependency installs) are pre-approved to run outside it: if one fails because of the sandbox, run it again with BypassSandbox. Other commands cannot leave the sandbox: do not request BypassSandbox for them, and if one cannot work inside it, say so in your report. A command denied by policy is a decision, not an obstacle: do not look for a workaround, report it.",
   ];
 
   const sections = [

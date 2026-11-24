@@ -133,6 +133,9 @@ describe.runIf(enabled)("Antigravity CLI (real account)", () => {
       }),
     );
     const done = await manager.waitFor(task.id, 10 * 60);
+    process.stderr.write(
+      `  read-only task: ${done.status}, continuations ${done.continuations ?? 0}, warnings ${done.warnings.length}\n`,
+    );
     expect(done.status).toBe("completed");
     expect(done.report?.findings.join(" ")).toMatch(/test repo/);
     expect(existsSync(path.join(repo, "should-not-exist.txt"))).toBe(false);

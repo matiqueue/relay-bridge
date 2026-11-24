@@ -63,7 +63,7 @@ delegate_task ─▶ validate paths, branch, model+effort ─▶ worktree / scra
                        schedule(): free slot (counted across every instance) ───────┘
                                                                                      ▼
             agy -p <brief> --model <variant> --output-format stream-json --json-schema <schema>
-                --print-timeout <n>m --settings <policy> --sandbox --disable-slash-commands [--mode accept-edits]
+                --print-timeout <n>m --settings <policy> --sandbox --disable-slash-commands --mode accept-edits
                 [--conversation <id>]          stdout → events.ndjson, stderr → stderr.log, own process group
                                                                                      │
        supervisor tick (every RELAY_BRIDGE_POLL_MS): read new events → progress ◀────┘
@@ -72,6 +72,10 @@ delegate_task ─▶ validate paths, branch, model+effort ─▶ worktree / scra
            finalize: status from the result (SUCCESS, interrupted, print_timeout, WAITING…), parse the report,
            verify git (or the read-only after-check), compact + redact the logs, write everything at once
 ```
+
+If the run "succeeds" without an answer because the turn ended at a command headless mode had to deny (the CLI
+prints "auto-denied"), the task goes back to the queue and resumes its own conversation with a short continuation
+prompt instead of finishing (`endedAtDenial`, at most twice).
 
 `decideStatus` maps the CLI's outcome: `SUCCESS` → `completed`; `finished_reason: print_timeout` (exit 3) or the
 watchdog → `timed_out`; `interrupted` or a requested stop → `cancelled`; `WAITING` → `awaiting_input`; anything else

@@ -246,6 +246,54 @@ describe("outcomes", () => {
     if (error) expect(done.outcome?.error).toMatch(error);
   });
 
+  it("continues the conversation when a turn ends at a command headless mode had to deny", async () => {
+    const record = tempDir();
+    process.env.FAKE_AGY_RECORD_DIR = record;
+    try {
+      const { manager } = await harness();
+      const task = await manager.delegate(
+        request({
+          workingDirectory: makeRepo(),
+          mode: "read_only",
+          task: "Look at something that needs a denied command. [[fake:autodeny]]",
+        }),
+      );
+      const done = await manager.waitFor(task.id, 20);
+      expect(done.status).toBe("completed");
+      expect(done.report?.summary).toBe("Continued without the denied command.");
+      expect(done.continuations).toBe(1);
+      expect(done.warnings.join(" ")).toMatch(/resumed the conversation/);
+      const runs = readdirSync(record).map(
+        (f) => (JSON.parse(readFileSync(path.join(record, f), "utf8")) as { args: string[] }).args,
+      );
+      const resumed = runs.find((args) => args.includes("--conversation"));
+      expect(resumed?.[resumed.indexOf("--conversation") + 1]).toBe(done.conversationId);
+      expect(resumed?.[resumed.indexOf("-p") + 1]).toMatch(/^Relay Bridge: your last turn ended/);
+    } finally {
+      delete process.env.FAKE_AGY_RECORD_DIR;
+    }
+  });
+
+  it("fails after two continuations that end at a denied command again", async () => {
+    process.env.FAKE_AGY_ALWAYS_DENY = "1";
+    try {
+      const { manager } = await harness();
+      const task = await manager.delegate(
+        request({
+          workingDirectory: makeRepo(),
+          mode: "read_only",
+          task: "Keep needing a denied command. [[fake:autodeny]]",
+        }),
+      );
+      const done = await manager.waitFor(task.id, 30);
+      expect(done.status).toBe("failed");
+      expect(done.continuations).toBe(2);
+      expect(done.outcome?.error).toMatch(/policy does not allow/);
+    } finally {
+      delete process.env.FAKE_AGY_ALWAYS_DENY;
+    }
+  });
+
   it("keeps a free-text answer when the agent returns no report", async () => {
     const { manager } = await harness();
     const task = await manager.delegate(
