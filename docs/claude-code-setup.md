@@ -41,11 +41,36 @@ In a session, `/mcp` lists the server and its eight tools. Before changing an ex
 relay-bridge` shows what is there; `claude mcp add` refuses to overwrite a server of the same name in the same
 scope.
 
-## 3. Tell your sessions how to use it
+## 3. Install the skill
 
-The server describes itself (instructions and tool descriptions are sent to Claude), but a project's working
-conventions are yours to give: which tasks to delegate, which branch naming to use, whether agents may push. Put
-them in the project's `CLAUDE.md`, or in your user-level `~/.claude/CLAUDE.md` for all projects.
+The server describes its tools; the `relay-bridge` skill (`skills/relay-bridge/`) is the playbook for using them:
+when to delegate, the model and effort, how to write a task, how to review and integrate the result. Install it as a
+personal skill:
+
+```bash
+npm run skill:install
+```
+
+It creates the symlink `~/.claude/skills/relay-bridge` pointing to the clone, so `git pull` updates it and Claude Code
+picks up changes without a restart. The script never overwrites an existing `relay-bridge` folder that is not its own
+link; `npm run skill:uninstall` removes only that link. In a session, `/skills` lists it; `/relay-bridge` loads it by
+hand, and Claude loads it by itself when it plans or splits work.
+
+## 4. Tell your projects to use it
+
+A skill is loaded when Claude judges it relevant; actively delegating is a working style, so say it where it is
+always read — the project's `CLAUDE.md` (or `~/.claude/CLAUDE.md` for every project):
+
+```markdown
+## Delegating with Relay Bridge
+
+Use the relay-bridge skill. Delegate well-defined work (implementation, tests, refactors, docs, configuration
+analysis, reviews) to Gemini instead of doing all of it yourself; you own the architecture, the review and the
+integration. Branches follow `flow/<type>/<nnn>-<description>` from an issue; agents may push their branch and open
+draft pull requests to `dev`.
+```
+
+Replace the last sentence with the project's own conventions.
 
 ## Updating
 

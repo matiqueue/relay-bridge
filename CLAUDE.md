@@ -29,6 +29,7 @@ npm run test               # unit tests only (Vitest); a stand-in CLI (test/fixt
 npm run test:integration   # real Antigravity CLI runs: needs a signed-in account, uses quota, takes minutes
 npm run build              # dist/
 npm run doctor             # checks agy, the account, Neon/Argon and the data directory
+npm run skill:install      # links skills/relay-bridge into ~/.claude/skills (test/skill.test.ts keeps it in sync)
 ```
 
 ## Architecture (short)
@@ -44,3 +45,5 @@ npm run doctor             # checks agy, the account, Neon/Argon and the data di
 - **A finished record is written once**, with status, report and verification together (`finalize` in
   `src/tasks/manager.ts`): readers that see a finished status must see everything.
 - Provider-specific code stays under `src/providers/<id>/`; the task manager and the tools are provider-neutral.
+- **The skill is part of the contract.** A change to a tool's name, parameters or results updates
+  `skills/relay-bridge/` in the same pull request; `test/skill.test.ts` fails on names the server does not have.

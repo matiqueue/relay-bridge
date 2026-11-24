@@ -10,7 +10,8 @@
   },
   "main": "dist/index.js",
   "files": [
-    "dist"
+    "dist",
+    "skills"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -24,6 +25,8 @@
     "format:check": "prettier --check .",
     "check": "npm run format:check && npm run typecheck && npm run lint && npm run test && npm run build",
     "doctor": "node dist/cli/doctor.js",
+    "skill:install": "node scripts/skill.mjs install",
+    "skill:uninstall": "node scripts/skill.mjs uninstall",
     "labels": "node scripts/labels.mjs",
     "prepare": "husky"
   },
