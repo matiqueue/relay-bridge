@@ -161,7 +161,9 @@ Analysis of another repository, writing nothing:
 }
 ```
 
-A typical two-step pattern: a read-only analysis first, then a `modify` task (or your own work) that applies it.
+A typical two-step pattern: a read-only analysis first, then a `modify` task (or your own work) that applies it. For a
+complete end-to-end session — from checking models to revision and worktree cleanup — see
+[docs/examples.md](docs/examples.md).
 
 ## Monitoring
 
