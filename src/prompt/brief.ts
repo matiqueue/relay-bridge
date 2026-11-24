@@ -59,7 +59,7 @@ function gitRules(input: BriefInput): string[] {
   }
   if (g.allowCommit && g.allowPush && g.allowPullRequest) {
     rules.push(
-      `After pushing, open a draft pull request with \`gh pr create --draft --base ${g.pullRequestBase ?? g.baseRef} --head ${g.branch}\`, a clear title and a description following the repository's pull request template if it has one. Never merge it.`,
+      `After pushing, open a draft pull request: write its description (following the repository's pull request template if it has one) to a file in the system temporary directory, then run \`gh pr create --draft --base ${g.pullRequestBase ?? g.baseRef} --head ${g.branch} --title "<clear title>" --body-file <that file>\`. Never merge it.`,
     );
   } else {
     rules.push("Do not open a pull request.");
@@ -106,7 +106,7 @@ export function buildBrief(input: BriefInput): string {
     "When something is unclear, investigate the code and docs first, then take safe, reversible steps. Escalate only decisions that are outside the task.",
     readOnly
       ? "Shell commands run in a sandbox where the repository is read-only: writes there fail. Do not request BypassSandbox — leaving the sandbox is not available in read-only tasks except for `gh` reading commands. A command denied by policy is a decision, not an obstacle: do not look for a workaround, report it."
-      : "Shell commands run in a sandbox. Commands that need the network or the repository's shared .git directory (git commit, git push, gh, dependency installs) are pre-approved to run outside it: if one fails because of the sandbox, run it again with BypassSandbox. Other commands cannot leave the sandbox: do not request BypassSandbox for them, and if one cannot work inside it, say so in your report. A command denied by policy is a decision, not an obstacle: do not look for a workaround, report it.",
+      : "Shell commands run in a sandbox. Commands that need the network or the repository's shared .git directory (git commit, git push, gh, dependency installs) are pre-approved to run outside it: if one fails because of the sandbox, run it again with BypassSandbox. Commands that leave the sandbox must be plain commands — no `$(...)`, backticks or heredocs, or they are denied. Other commands cannot leave the sandbox: do not request BypassSandbox for them, and if one cannot work inside it, say so in your report. A command denied by policy is a decision, not an obstacle: do not look for a workaround, report it.",
   ];
 
   const sections = [

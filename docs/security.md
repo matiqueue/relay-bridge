@@ -76,7 +76,9 @@ command such as `cat` read `~/.ssh` outside it. Everything else runs inside the 
 (`toolPermission: proceed-in-sandbox`), where a write to a read-only repository simply fails.
 
 A command that needs an approval nobody can give in headless mode is denied by the CLI, and Antigravity CLI 1.5.15
-then ends the agent's turn without an answer. Relay Bridge detects this, resumes the same conversation and tells the
+then ends the agent's turn without an answer. The allow rules match plain command lines only: a command that leaves
+the sandbox with `$(...)`, backticks or a heredoc in it is denied, so the brief tells agents to pass long text as a
+file (`gh pr create --body-file`). Relay Bridge detects this, resumes the same conversation and tells the
 agent the command was denied and to finish without it (at most twice; then the task fails with the denied commands
 in its error).
 

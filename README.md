@@ -276,8 +276,9 @@ sandbox, tasks on Argon, cancellation, and the deny policy for destructive git o
 - **No live input.** If the agent stops to ask a question, the task ends as `awaiting_input`; answer it with
   `request_task_revision`.
 - **Approvals end a turn.** In headless mode a command that needs approval is denied and, in Antigravity CLI 1.5.15,
-  ends the agent's turn. Relay Bridge resumes the conversation and tells the agent to continue without it (twice at
-  most), so tasks finish — but an agent that really needs such a command reports it as a blocker.
+  ends the agent's turn; a turn can also end before the agent's final answer. Relay Bridge then resumes the
+  conversation and asks the agent to finish and report (twice at most) — an agent that really needs a denied command
+  reports it as a blocker.
 - **Quota.** Runs use your plan's Antigravity quota; heavy parallel use can exhaust it (the task then fails with the
   CLI's message).
 - **Read-only is enforced by the sandbox, not by Relay Bridge.** After a read-only task, Relay Bridge reports any

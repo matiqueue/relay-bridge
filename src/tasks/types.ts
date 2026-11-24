@@ -152,6 +152,8 @@ export interface TaskRecord {
    */
   continuations?: number;
   nextPrompt?: string | undefined;
+  /** Permission denials already answered by a continuation. */
+  denialsSeen?: number;
 }
 
 export function emptyProgress(): TaskProgress {

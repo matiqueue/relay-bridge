@@ -92,7 +92,9 @@ const scenarioMarkers = markers.filter((m) => m[1] !== "conv");
 const scenario = continuation
   ? process.env.FAKE_AGY_ALWAYS_DENY === "1"
     ? "autodeny"
-    : "continued"
+    : process.env.FAKE_AGY_ALWAYS_NOREPORT === "1"
+      ? "noreport"
+      : "continued"
   : (scenarioMarkers.at(-1)?.[1] ?? "commit");
 const scenarioArg = scenarioMarkers.at(-1)?.[2];
 const resume = flag("--conversation");
@@ -255,7 +257,7 @@ switch (scenario) {
     break;
   }
   case "continued": {
-    succeed(report({ summary: "Continued without the denied command.", known_issues: ["touch was denied"] }));
+    succeed(report({ summary: "Finished after the continuation.", known_issues: ["touch was denied"] }));
     break;
   }
   case "noreport": {

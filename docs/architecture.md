@@ -73,9 +73,9 @@ delegate_task ─▶ validate paths, branch, model+effort ─▶ worktree / scra
            verify git (or the read-only after-check), compact + redact the logs, write everything at once
 ```
 
-If the run "succeeds" without an answer because the turn ended at a command headless mode had to deny (the CLI
-prints "auto-denied"), the task goes back to the queue and resumes its own conversation with a short continuation
-prompt instead of finishing (`endedAtDenial`, at most twice).
+If the run "succeeds" without a report — the turn ended at a command headless mode had to deny, or the agent stopped
+short (for example after waiting for a background command) — the task goes back to the queue and resumes its own
+conversation with a short continuation prompt instead of finishing (`missingReport`, at most twice).
 
 `decideStatus` maps the CLI's outcome: `SUCCESS` → `completed`; `finished_reason: print_timeout` (exit 3) or the
 watchdog → `timed_out`; `interrupted` or a requested stop → `cancelled`; `WAITING` → `awaiting_input`; anything else

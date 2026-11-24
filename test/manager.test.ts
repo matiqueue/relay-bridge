@@ -260,7 +260,7 @@ describe("outcomes", () => {
       );
       const done = await manager.waitFor(task.id, 20);
       expect(done.status).toBe("completed");
-      expect(done.report?.summary).toBe("Continued without the denied command.");
+      expect(done.report?.summary).toBe("Finished after the continuation.");
       expect(done.continuations).toBe(1);
       expect(done.warnings.join(" ")).toMatch(/resumed the conversation/);
       const runs = readdirSync(record).map(
@@ -294,16 +294,34 @@ describe("outcomes", () => {
     }
   });
 
-  it("keeps a free-text answer when the agent returns no report", async () => {
+  it("asks for the report when a turn ends without one", async () => {
     const { manager } = await harness();
     const task = await manager.delegate(
       request({ workingDirectory: makeRepo(), task: "Do it but forget the report. [[fake:noreport]]" }),
     );
     const done = await manager.waitFor(task.id, 20);
     expect(done.status).toBe("completed");
-    expect(done.report).toBeUndefined();
-    expect(done.outcome?.response).toContain("trust me");
-    expect(done.warnings.join(" ")).toMatch(/without a structured report/);
+    expect(done.report?.summary).toBe("Finished after the continuation.");
+    expect(done.continuations).toBe(1);
+    expect(done.warnings.join(" ")).toMatch(/ended without its report/);
+  });
+
+  it("keeps a free-text answer when the agent never reports", async () => {
+    process.env.FAKE_AGY_ALWAYS_NOREPORT = "1";
+    try {
+      const { manager } = await harness();
+      const task = await manager.delegate(
+        request({ workingDirectory: makeRepo(), task: "Never write the report at all. [[fake:noreport]]" }),
+      );
+      const done = await manager.waitFor(task.id, 30);
+      expect(done.status).toBe("completed");
+      expect(done.continuations).toBe(2);
+      expect(done.report).toBeUndefined();
+      expect(done.outcome?.response).toContain("trust me");
+      expect(done.warnings.join(" ")).toMatch(/without a structured report/);
+    } finally {
+      delete process.env.FAKE_AGY_ALWAYS_NOREPORT;
+    }
   });
 
   it("records permission denials and redacts secrets from the record and the log", async () => {

@@ -40,6 +40,7 @@ describe("buildBrief", () => {
     expect(noCommit).toContain("Do not commit.");
     const pr = buildBrief({ ...modify, git: { ...modify.git!, allowPullRequest: true } });
     expect(pr).toContain("gh pr create --draft --base dev --head flow/feature/012-csv-export");
+    expect(pr).toContain("--body-file");
   });
 
   it("tells a read-only agent where the repository is and that its output is the report", () => {

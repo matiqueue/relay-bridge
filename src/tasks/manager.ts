@@ -89,17 +89,19 @@ const RESUME_FAILURE = /conversation|-32002|not found|unknown id/i;
 const AUTO_DENIED = /auto-denied|cannot prompt|no output produced/i;
 const MAX_CONTINUATIONS = 2;
 
-/** The run "succeeded" but the turn ended at a command that needed approval, before the agent answered. */
-export function endedAtDenial(
-  record: Pick<TaskRecord, "progress" | "continuations">,
+/**
+ * Why a run that "succeeded" has no report: its turn ended at a command headless mode had to deny ("denied"), or the
+ * agent stopped short of the final answer, e.g. after waiting for a background task ("unfinished").
+ */
+export function missingReport(
+  record: Pick<TaskRecord, "progress" | "denialsSeen">,
   result: Extract<ProviderEvent, { kind: "result" }> | undefined,
   hasReport: boolean,
   stderr: string,
-): boolean {
-  if (!result || result.status !== "SUCCESS" || hasReport || result.response.trim() !== "") return false;
-  return (
-    AUTO_DENIED.test(stderr) || ((record.continuations ?? 0) === 0 && record.progress.permissionDenials.length > 0)
-  );
+): "denied" | "unfinished" | undefined {
+  if (!result || result.status !== "SUCCESS" || hasReport) return undefined;
+  const newDenials = record.progress.permissionDenials.length > (record.denialsSeen ?? 0);
+  return AUTO_DENIED.test(stderr) || newDenials ? "denied" : "unfinished";
 }
 
 function nowIso(): string {
@@ -705,7 +707,7 @@ export class TaskManager {
     if (entry.watchdog) clearTimeout(entry.watchdog);
     const paths = this.store.paths(entry.id);
     let restart: TaskRecord | undefined;
-    let continueAfterDenial: TaskRecord | undefined;
+    let continueRun: { record: TaskRecord; reason: "denied" | "unfinished" } | undefined;
     try {
       await this.readEvents(entry);
       const result = entry.result ?? (await this.lastResult(paths.events, entry.provider));
@@ -725,21 +727,17 @@ export class TaskManager {
       }
 
       const parsed = result ? parseReport(result.structuredOutput, result.response) : undefined;
-      const deniedEnd = endedAtDenial(before, result, parsed !== undefined, stderr);
-      if (
-        deniedEnd &&
-        before.conversationId &&
-        (before.continuations ?? 0) < MAX_CONTINUATIONS &&
-        !before.cancelRequested
-      ) {
-        continueAfterDenial = before;
+      const gap = missingReport(before, result, parsed !== undefined, stderr);
+      if (gap && before.conversationId && (before.continuations ?? 0) < MAX_CONTINUATIONS && !before.cancelRequested) {
+        continueRun = { record: before, reason: gap };
         return;
       }
 
       let status = decideStatus(before, result, entry.exit, stderr);
-      const deniedError = deniedEnd
-        ? `The agent's turn kept ending at commands the task's policy does not allow (${before.progress.permissionDenials.slice(-3).join("; ") || "a command that needed approval"}), and it never reported. Allow the command (RELAY_BRIDGE_EXTRA_ALLOW) or change the task.`
-        : undefined;
+      const deniedError =
+        gap === "denied"
+          ? `The agent's turn kept ending at commands the task's policy does not allow (${before.progress.permissionDenials.slice(-3).join("; ") || "a command that needed approval"}), and it never reported. Allow the command (RELAY_BRIDGE_EXTRA_ALLOW) or change the task.`
+          : undefined;
       if (deniedError) status = "failed";
       const outcome: TaskOutcome = {
         cliStatus: result?.status,
@@ -793,38 +791,47 @@ export class TaskManager {
         .catch(() => undefined);
     } finally {
       this.supervised.delete(entry.id);
-      if (!restart && !continueAfterDenial) await this.store.release(entry.id).catch(() => undefined);
+      if (!restart && !continueRun) await this.store.release(entry.id).catch(() => undefined);
       if (restart)
         await this.restartWithoutResume(entry, restart).catch((error: unknown) => this.log.error(String(error)));
-      if (continueAfterDenial)
-        await this.continueAfterDenial(continueAfterDenial).catch((error: unknown) => this.log.error(String(error)));
+      if (continueRun)
+        await this.continueRun(continueRun.record, continueRun.reason).catch((error: unknown) =>
+          this.log.error(String(error)),
+        );
       await this.schedule();
     }
   }
 
-  private async continueAfterDenial(record: TaskRecord): Promise<void> {
+  /** Resumes the run's own conversation with a short prompt, instead of finishing a task that has no report. */
+  private async continueRun(record: TaskRecord, reason: "denied" | "unfinished"): Promise<void> {
     const paths = this.store.paths(record.id);
     const number = (record.continuations ?? 0) + 1;
-    // The next run's stderr starts empty, so the old "auto-denied" line is not taken for a new one
+    // The next run's stderr starts empty, so an old "auto-denied" line is not taken for a new one
     await rename(paths.stderr, `${paths.stderr.replace(/\.log$/, "")}.${number}.log`).catch(() => undefined);
     const denials = record.progress.permissionDenials.slice(-3);
-    const prompt = [
-      "Relay Bridge: your last turn ended because a command needed an approval that cannot be given in this run, so it was denied" +
-        (denials.length > 0 ? `: ${denials.join("; ")}.` : "."),
-      "That is the task's policy. Do not run it again and do not look for a workaround.",
-      "Continue the task without it and finish with the JSON report the output schema requires. Mention the denied command under known_issues, or as the blocker if the task cannot be done without it.",
-    ].join(" ");
+    const prompt =
+      reason === "denied"
+        ? [
+            "Relay Bridge: your last turn ended because a command needed an approval that cannot be given in this run, so it was denied" +
+              (denials.length > 0 ? `: ${denials.join("; ")}.` : "."),
+            "Do not run it again in that form and do not look for a workaround of the policy. Commands that leave the sandbox must be plain commands without $(...), backticks or heredocs: write long text (such as a pull request description) to a temporary file and pass the file (gh pr create --body-file <file>).",
+            "Continue the task and finish with the JSON report the output schema requires. Mention a command you could not run under known_issues, or as the blocker if the task cannot be done without it.",
+          ].join(" ")
+        : "Relay Bridge: your last turn ended without the final JSON report. If any work is left, finish it now (including any background command you were waiting for); then answer with the JSON report the output schema requires.";
     await this.store.update(record.id, (r) => {
       r.status = "queued";
       r.process = undefined;
       r.resumeConversationId = r.conversationId;
       r.nextPrompt = prompt;
       r.continuations = number;
+      r.denialsSeen = r.progress.permissionDenials.length;
       r.warnings.push(
-        `The agent's turn ended at a command that needed approval${denials.length > 0 ? ` (${denials.join("; ")})` : ""}; Relay Bridge resumed the conversation and told it to continue without it (continuation ${number} of ${MAX_CONTINUATIONS}).`,
+        reason === "denied"
+          ? `The agent's turn ended at a command that needed approval${denials.length > 0 ? ` (${denials.join("; ")})` : ""}; Relay Bridge resumed the conversation and told it to continue without it (continuation ${number} of ${MAX_CONTINUATIONS}).`
+          : `The agent's turn ended without its report; Relay Bridge resumed the conversation and asked it to finish and report (continuation ${number} of ${MAX_CONTINUATIONS}).`,
       );
     });
-    this.log.warn(`task ${record.id}: turn ended at a denied command, continuing the conversation (${number})`);
+    this.log.warn(`task ${record.id}: no report (${reason}), continuing the conversation (${number})`);
   }
 
   private async restartWithoutResume(entry: Supervised, record: TaskRecord): Promise<void> {
