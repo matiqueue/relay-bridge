@@ -27,7 +27,7 @@ It is a personal tool for any local git repository — private, public, work or 
 ## Contents
 
 - [Why](#why) · [How a delegated task runs](#how-a-delegated-task-runs) · [Models and effort](#models-and-effort)
-- [Requirements](#requirements) · [Install](#install) · [Register in Claude Code](#register-in-claude-code)
+- [Requirements](#requirements) · [Install](#install) · [Register in Claude Code](#register-in-claude-code) · [The skill](#the-claude-code-skill)
 - [Tools](#tools) · [Delegating work](#delegating-work) · [Monitoring](#monitoring) · [Worktrees and branches](#worktrees-and-branches)
 - [Security](#security) · [Configuration](#configuration) · [Where state lives](#where-state-lives)
 - [Troubleshooting](#troubleshooting) · [Development](#development) · [Status and limitations](#status-and-limitations)
@@ -113,6 +113,20 @@ claude mcp list   # relay-bridge … ✓ Connected
 
 Use the absolute path of your clone. Environment variables for the server go before `--`, for example
 `-e RELAY_BRIDGE_MAX_CONCURRENCY=2`. Details, updating and removal: [docs/claude-code-setup.md](docs/claude-code-setup.md).
+
+### The Claude Code skill
+
+The server tells Claude what its tools do; the **`relay-bridge` skill** tells it how to work with them — when to
+delegate, `neon` or `argon` and which effort, how to write a task, how to review and integrate the result. Install it
+once as a personal skill (a symlink, so it updates with the clone):
+
+```bash
+npm run skill:install   # ~/.claude/skills/relay-bridge -> ./skills/relay-bridge
+```
+
+Claude loads it when it plans or splits work. To make a project delegate actively, add a line to its `CLAUDE.md`,
+for example: _"Use the relay-bridge skill: delegate well-defined work to Gemini, review it, integrate it yourself."_
+plus the project's own conventions (branch naming, whether agents may push).
 
 ## Tools
 
