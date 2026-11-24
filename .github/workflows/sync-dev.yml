@@ -1,47 +1,51 @@
 name: Sync dev
 
-# After every push to prod (a merged dev -> prod pull request or a merged release pull request), merge prod back
+# After every push to prod (a merged dev -> prod pull request or a merged release pull request), bring prod back
 # into dev, so dev always has the released version and the changelog, and the next dev -> prod pull request starts
-# from it. A conflict fails this run: merge prod into dev by hand then.
+# from it.
+#
+# dev accepts changes only through pull requests (.github/rulesets/pull-requests.json), and on a repository owned
+# by a personal account GitHub Actions cannot be a bypass actor of that ruleset. So this workflow does not push to
+# dev: it opens (or leaves open) a `prod -> dev` pull request, which a repository admin merges with a merge commit.
+# A pull request opened with GITHUB_TOKEN starts no workflow, so the required CI check never reports on it: the
+# admin merges it with the ruleset bypass (prod already passed CI on its own push).
 
 on:
   push:
     branches: [prod]
 
 permissions:
-  contents: write
+  contents: read
+  pull-requests: write
 
 concurrency:
   group: sync-dev
   cancel-in-progress: false
 
 jobs:
-  merge:
+  pull-request:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: dev
           fetch-depth: 0
 
-      - name: Merge prod into dev
+      - name: Open a prod -> dev pull request when dev is behind
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # Retried: a release and a dev -> prod merge can sync at the same time
-          for attempt in 1 2 3; do
-            git fetch origin prod dev
-            git reset --hard origin/dev
-            if git merge-base --is-ancestor origin/prod HEAD; then
-              echo "dev already has everything from prod." >> "$GITHUB_STEP_SUMMARY"
-              exit 0
-            fi
-            git merge --no-edit origin/prod -m "chore: merge prod into dev"
-            if git push origin dev; then
-              echo "Merged prod into dev." >> "$GITHUB_STEP_SUMMARY"
-              exit 0
-            fi
-            sleep $((attempt * 10))
-          done
-          exit 1
+          git fetch origin prod dev
+          if git merge-base --is-ancestor origin/prod origin/dev; then
+            echo "dev already has everything from prod." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          existing=$(gh pr list --base dev --head prod --state open --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            echo "Pull request #$existing already brings prod into dev." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          gh pr create --base dev --head prod \
+            --title "chore: merge prod into dev" \
+            --body "Brings the released version and changelog from \`prod\` back into \`dev\` (sync-dev.yml). Merge with a merge commit."
+          echo "Opened a prod -> dev pull request." >> "$GITHUB_STEP_SUMMARY"
