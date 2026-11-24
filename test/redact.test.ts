@@ -5,7 +5,7 @@ describe("redact", () => {
   it.each([
     ["ghp_0123456789abcdefghijABCDEFGHIJ012345", "GITHUB"],
     ["github_pat_11ABCDEFG0123456789_abcdefghijklmnopqrstuvwxyz", "GITHUB"],
-    ["AIzaSyA1234567890abcdefghijklmnopqrstuv", "GOOGLE API KEY"],
+    ["AIza" + "SyA1234567890abcdefghijklmnopqrstuv", "GOOGLE API KEY"],
     ["ya29.a0AfH6SMBabcdefghijklmnopqrstuvwxyz", "GOOGLE OAUTH"],
     ["AKIAIOSFODNN7EXAMPLE", "AWS"],
     ["xoxb-123456789012-abcdefghijkl", "SLACK"],
