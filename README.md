@@ -200,6 +200,10 @@ permission denials. Several tasks can run at once (`RELAY_BRIDGE_MAX_CONCURRENCY
 `queued`. Tasks keep running when the Claude Code session that started them ends: the next Relay Bridge instance
 adopts them.
 
+To inspect local usage across models (task share, tokens, completion rate, average duration) without spending any model
+tokens, run `npm run stats` (or `relay-stats [today|7d|24h|--json]`; inside Claude Code, `!relay-stats` runs it
+locally in the shell).
+
 ## Worktrees and branches
 
 - A `modify` task gets its own worktree under `~/.relay-bridge/worktrees/<repo>-<task-id>` on a new branch

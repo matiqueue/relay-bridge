@@ -72,6 +72,18 @@ draft pull requests to `dev`.
 
 Replace the last sentence with the project's own conventions.
 
+## 5. Optional: quick local usage stats (`!relay-stats`)
+
+`npm run stats` prints a local table of model usage (`hydrogen`, `neon`, `carbon`, plus any retired models in history),
+tokens, completion rates and durations straight from `~/.relay-bridge/tasks`. To run it from any Claude Code session
+with zero LLM tokens (`!relay-stats`, `!relay-stats 7d`, `!relay-stats today`), symlink the built CLI into a directory
+on your `PATH`, for example:
+
+```bash
+chmod +x ~/code/relay-bridge/dist/cli/stats.js
+ln -sf ~/code/relay-bridge/dist/cli/stats.js ~/.local/bin/relay-stats
+```
+
 ## Updating
 
 ```bash
