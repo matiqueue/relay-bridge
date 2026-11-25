@@ -5,15 +5,28 @@
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
+  "bin": {
+    "relay-bridge": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "files": [
+    "dist",
+    "skills"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:integration": "RELAY_BRIDGE_INTEGRATION=1 vitest run --config vitest.integration.config.ts",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint --max-warnings=0 .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run format:check && npm run typecheck && npm run lint && npm run test && npm run build",
+    "doctor": "node dist/cli/doctor.js",
+    "skill:install": "node scripts/skill.mjs install",
+    "skill:uninstall": "node scripts/skill.mjs uninstall",
     "labels": "node scripts/labels.mjs",
     "prepare": "husky"
   },
@@ -38,5 +51,9 @@
   "os": [
     "darwin",
     "linux"
-  ]
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^4.6.7"
+  }
 }
