@@ -54,9 +54,15 @@ if (args[0] === "models") {
     process.stderr.write("error: authentication required: run agy to sign in\n");
     process.exit(1);
   }
+  if (process.env.FAKE_AGY_MODELS_FAIL === "quota") {
+    process.stderr.write("error: 429 resource_exhausted: quota limit reached\n");
+    process.exit(1);
+  }
   process.stdout.write("Fetching available models...\n");
   for (const [id, label] of MODELS) {
     if (process.env.FAKE_AGY_NO_CARBON === "1" && id.includes("carbon")) continue;
+    if (process.env.FAKE_AGY_ONLY_HYDROGEN === "1" && !id.includes("hydrogen")) continue;
+    if (process.env.FAKE_AGY_NO_MODELS === "1" && /hydrogen|neon|carbon/.test(id)) continue;
     process.stdout.write(`${id}\t${label}\n`);
   }
   process.exit(0);

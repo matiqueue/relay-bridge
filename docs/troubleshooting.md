@@ -25,11 +25,16 @@ their effort levels — the same way the MCP server sees them.
 - `agy` is not on the `PATH` the server gets from Claude Code: set `RELAY_BRIDGE_AGY_PATH` to its absolute path
   (`which agy`).
 
-## `MODEL_UNAVAILABLE` / `EFFORT_UNSUPPORTED`
+## `MODEL_UNAVAILABLE` / `EFFORT_UNSUPPORTED` / `QUOTA_EXHAUSTED`
 
 - `list_available_models` (or `agy models`) shows what the account has. Hydrogen, Neon and Carbon need a plan that
-  includes them (Google AI Pro or Ultra at the time of writing; Pro trials may not include every model). Relay Bridge
-  never falls back to another model.
+  includes them (Google AI Pro or Ultra at the time of writing; Pro trials may not include every model). When all three
+  are listed, each alias runs strictly on its own model. If an alias is missing from the account (for example, only
+  `hydrogen` is available), Relay Bridge falls back to an available alias and records a warning; `MODEL_UNAVAILABLE`
+  only happens when none of the three exist or when revising a retired `argon` task without naming a new model.
+- `QUOTA_EXHAUSTED` (and `error_code: "QUOTA_EXHAUSTED"` in task status/result) means the Antigravity CLI hit a quota or
+  rate limit. Wait for quota to reset, lower concurrency or effort, or retry on another available model (e.g.
+  `hydrogen`) with `request_task_revision`.
 - Effort levels differ per model: Carbon has no `xhigh` on current accounts. The error lists the supported levels.
 - `argon` is retired. `delegate_task` rejects it; revising a task that ran on Argon fails with `MODEL_UNAVAILABLE`
   until you pass `model` (usually `carbon`, which took over Argon's role).

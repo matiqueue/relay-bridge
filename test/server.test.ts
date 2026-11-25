@@ -132,6 +132,18 @@ describe("MCP server", () => {
       execution_mode: "read_only",
     });
     expect(relative.body.error).toBe("INVALID_INPUT");
+
+    const quota = await call(client, "delegate_task", {
+      task: "Trigger a quota exhaustion failure. [[fake:fail]]",
+      working_directory: makeRepo(),
+      execution_mode: "read_only",
+    });
+    const quotaStatus = await call(client, "check_agent_status", { task_id: quota.body.task_id, wait_seconds: 20 });
+    expect(quotaStatus.body.status).toBe("failed");
+    expect(quotaStatus.body.error_code).toBe("QUOTA_EXHAUSTED");
+    expect(quotaStatus.body.next).toMatch(/Quota or rate limit was exhausted/);
+    const quotaResult = await call(client, "get_agent_result", { task_id: quota.body.task_id });
+    expect(quotaResult.body.outcome.error_code).toBe("QUOTA_EXHAUSTED");
   });
 
   it("no longer accepts the retired argon alias", async () => {

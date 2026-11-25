@@ -46,6 +46,6 @@ jobs:
             exit 0
           fi
           gh pr create --base dev --head prod \
-            --title "chore: merge prod into dev" \
+            --title "🔄 Sync: prod → dev" \
             --body "Brings the released version and changelog from \`prod\` back into \`dev\` (sync-dev.yml). Merge with a merge commit."
           echo "Opened a prod -> dev pull request." >> "$GITHUB_STEP_SUMMARY"

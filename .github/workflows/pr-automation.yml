@@ -5,9 +5,13 @@ name: PR automation
 #   flow/feature/001-mcp-server  "MCP server with the Antigravity provider"
 #     -> "✨ Feature: [001] MCP server with the Antigravity provider"
 # and the pull request gets the matching `type:` label. The release pull request dev -> prod becomes
-# "🚀 Release: dev → prod". The same job first checks the branch name: flow/<type>/<nnn>-<description>, <nnn> a
-# real issue (it fails the pull request otherwise), and last fills the sidebar: the author as assignee, the issue's
-# `area:`/`prio:` labels and "Closes #<nnn>" when the description lacks it.
+# "🚀 Release: dev → prod" and the sync pull request prod -> dev "🔄 Sync: prod → dev" (sync-dev.yml opens it with
+# that title; this restores it after a manual edit). Release Please titles its own pull requests
+# ("🔖 Release: relay-bridge v<version>", release-please-config.json) and parses that title to tag the release, so
+# release-please--* pull requests are never renamed here. The same job first checks the branch name:
+# flow/<type>/<nnn>-<description>, <nnn> a real issue (it fails the pull request otherwise), and last fills the
+# sidebar: the author as assignee, the issue's `area:`/`prio:` labels and "Closes #<nnn>" when the description lacks
+# it.
 #
 # No checkout: nothing of the pull request runs with this write token. An `edited` event that did not touch the
 # title or the base (a description edit) never gets a runner, and the rename made here uses GITHUB_TOKEN, which
@@ -127,9 +131,10 @@ jobs:
               spike: ['🔍 Spike', 'type: 🔍 spike'],
             };
 
-            if (pr.head.ref === 'dev' && pr.base.ref === 'prod') {
-              const title = '🚀 Release: dev → prod';
-              if (pr.title !== title) await github.rest.pulls.update({ ...ref, pull_number: pr.number, title });
+            const FIXED_TITLES = { 'dev->prod': '🚀 Release: dev → prod', 'prod->dev': '🔄 Sync: prod → dev' };
+            const fixed = FIXED_TITLES[`${pr.head.ref}->${pr.base.ref}`];
+            if (fixed) {
+              if (pr.title !== fixed) await github.rest.pulls.update({ ...ref, pull_number: pr.number, title: fixed });
               return;
             }
 
