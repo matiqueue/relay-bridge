@@ -22,7 +22,7 @@ src/
 │   ├── registry.ts           providers by id
 │   └── antigravity/
 │       ├── provider.ts       agy: discovery, effort probe, starting a detached run
-│       ├── models.ts         `agy models` → neon/argon aliases (no hardcoded ids)
+│       ├── models.ts         `agy models` → hydrogen/neon/carbon aliases (no hardcoded ids)
 │       ├── events.ts         stream-json → normalised events; log compaction
 │       └── policy.ts         the per-run permission policy (allow/deny rules, sandbox settings)
 ├── prompt/
@@ -52,8 +52,10 @@ interface AgentProvider {
 Everything around it — validation, worktrees, the brief, persistence, supervision, timeouts, verification, the tools
 — is provider-neutral. Adding an executor (for example GitHub Copilot's CLI, once it can run a task headlessly and
 report events) means one more directory under `providers/`, one `register()` call in `app.ts`, and widening the
-`provider` enum of `delegate_task`. The aliases (`neon`, `argon`) are Antigravity's today; another provider would
-bring its own and the alias enum would follow.
+`provider` enum of `delegate_task`. The aliases (`hydrogen`, `neon`, `carbon`, in `MODEL_ALIASES` in
+`src/providers/types.ts`) are Antigravity's today; another provider would bring its own and the alias enum would
+follow. Retired aliases (`argon`) are listed in `RETIRED_MODEL_ALIASES`: old task records keep them, a revision of
+such a task must name its model, and the successor is only suggested in the error.
 
 ## A task's life
 

@@ -15,9 +15,15 @@ effort levels each one supports:
 {}
 ```
 
-The response lists `neon` (default executor) and `argon` (hardest problems) with their resolved `model_id` values and
-confirmed `efforts` (for example `["low", "medium", "high", "xhigh"]` for `neon` and `["low", "medium", "high"]` for
-`argon`). Pass `"refresh": true` only if the account's plan changed recently.
+The response lists `hydrogen` (fast, routine work), `neon` (default executor) and `carbon` (hardest problems) with
+their resolved `model_id` values and confirmed `efforts` (for example `["low", "medium", "high", "xhigh"]` for
+`hydrogen` and `neon`, and `["low", "medium", "high"]` for `carbon`), plus `guidance` on when to use each. Pass
+`"refresh": true` only if the account's plan changed recently.
+
+This walkthrough uses `neon` throughout: comparing tooling and porting it is everyday work. A purely mechanical
+follow-up (say, bumping the Node version in the new CI matrix) would go to `hydrogen` at `low`; an architecture
+question the comparison raised (say, how to split the CI into reusable workflows for many repositories) would go to
+`carbon` at `high`.
 
 ## 2. Run a read-only comparison
 

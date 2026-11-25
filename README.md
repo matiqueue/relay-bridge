@@ -12,9 +12,9 @@ structured report plus facts Relay Bridge verified itself, reviews the diff, and
 ```
 ┌──────────────┐  MCP (stdio)  ┌──────────────┐  agy -p … --output-format stream-json  ┌──────────────────┐
 │ Claude Code  │──────────────▶│ Relay Bridge │───────────────────────────────────────▶│ Antigravity CLI  │
-│ (the lead)   │◀──────────────│  task runner │◀───────── events, structured report ───│ Gemini (Neon /   │
-└──────────────┘  task ids,    └──────┬───────┘                                        │ Argon) in a      │
-                  status,             │ git worktree add, verify commits/push           │ sandbox          │
+│ (the lead)   │◀──────────────│  task runner │◀───────── events, structured report ───│ Gemini (Hydrogen,│
+└──────────────┘  task ids,    └──────┬───────┘                                        │ Neon, Carbon) in │
+                  status,             │ git worktree add, verify commits/push           │ a sandbox        │
                   results             ▼                                                 └────────┬─────────┘
                                ┌──────────────┐        edits, tests, commits, push               │
                                │ your repo    │◀─────────────────────────────────────────────────┘
@@ -59,29 +59,35 @@ once, survives restarts, and hands back results Claude can check instead of trus
 
 ## Models and effort
 
-Relay Bridge uses exactly two models and never falls back to another one:
+Relay Bridge uses exactly three Gemini 4 models, one per kind of work, and never falls back to another one:
 
-| Alias   | Role                                             | Typical work                                                                                              |
-| ------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| `neon`  | **default executor**, best quality for the quota | features, components, endpoints, refactors, tests, typical bugs, docs, configuration analysis, migrations |
-| `argon` | the hardest problems                             | architecture questions, complex bugs, intricate algorithms, demanding analysis and code review            |
+| Alias      | Model             | Role                                                    | Typical work                                                                                                      |
+| ---------- | ----------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `hydrogen` | Gemini 4 Hydrogen | fast, routine work and operations that need low latency | mechanical or repetitive edits, renames, formatting, version bumps, small fixes with a known cause, quick lookups |
+| `neon`     | Gemini 4 Neon     | **default**: everyday complex work and standard coding  | features, components, endpoints, refactors, tests, typical bugs, docs, configuration analysis, migrations         |
+| `carbon`   | Gemini 4 Carbon   | the hardest problems                                    | deep reasoning, architecture planning, complex bugs, intricate algorithms, long verification, demanding review    |
+
+Argon, the earlier "hardest problems" model, is retired: `argon` is no longer accepted, and Carbon took over its role.
+Tasks recorded on Argon stay readable; a revision of one names its model explicitly.
 
 The real model ids (for example `gemini-4-neon-high`) are **not hardcoded**: they are read from `agy models` and
 matched by family name in both the id and the display name, preferring the newest generation; Orchestrator variants
-are never used. The effort levels are confirmed with the CLI (`agy -p /effort`, answered locally). On a current
-Google AI Pro account that gives:
+(including "Orchestrator (Carbon)") are never used. The effort levels are confirmed with the CLI (`agy -p /effort`,
+answered locally). On a current Google AI Pro account that gives:
 
-| Alias   | Efforts                          |
-| ------- | -------------------------------- |
-| `neon`  | `low`, `medium`, `high`, `xhigh` |
-| `argon` | `low`, `medium`, `high`          |
+| Alias      | Efforts                          |
+| ---------- | -------------------------------- |
+| `hydrogen` | `low`, `medium`, `high`, `xhigh` |
+| `neon`     | `low`, `medium`, `high`, `xhigh` |
+| `carbon`   | `low`, `medium`, `high`          |
 
 `list_available_models` always shows what _your_ account has. A missing model or an unsupported effort is a clear
 error (`MODEL_UNAVAILABLE`, `EFFORT_UNSUPPORTED` with the supported levels), never a silent substitution.
 
-A reasonable policy, which the orchestrator adapts per task: simple work → Neon `low`/`medium`; typical work → Neon
-`medium`/`high`; harder implementations → Neon `high`/`xhigh`; complex bugs → Argon `high`; hard architecture
-analysis → Argon at its highest level.
+A reasonable policy, which the orchestrator adapts per task: quick, routine or mechanical work → Hydrogen
+`low`/`medium`; typical work → Neon `medium`/`high`; harder implementations → Neon `high`/`xhigh`; complex bugs →
+Carbon `high`; architecture planning and long verification → Carbon at its highest level. Start one tier lower when
+in doubt and move up with `request_task_revision` (it can switch the model) when the result shows the task needed it.
 
 ## Requirements
 
@@ -89,7 +95,8 @@ analysis → Argon at its highest level.
 - Node.js 22 or newer, git, and optionally the GitHub CLI (`gh`, signed in) for agents that open pull requests.
 - The [Antigravity CLI](https://antigravity.google/docs/getting-started) (`agy`), signed in once interactively.
   Relay Bridge uses your existing sign-in (the CLI reads it from the system keychain); **no API key and no extra
-  billing**. Neon and Argon require a plan that includes them (Google AI Pro or Ultra at the time of writing).
+  billing**. Hydrogen, Neon and Carbon require a plan that includes them (Google AI Pro or Ultra at the time of
+  writing).
 
 ## Install
 
@@ -98,7 +105,7 @@ git clone https://github.com/matiqueue/relay-bridge.git ~/code/relay-bridge   # 
 cd ~/code/relay-bridge
 npm install
 npm run build
-npm run doctor   # checks Node, git, agy, the sign-in, Neon/Argon and their efforts, the data directory
+npm run doctor   # checks Node, git, agy, the sign-in, Hydrogen/Neon/Carbon and their efforts, the data directory
 ```
 
 ## Register in Claude Code
@@ -117,8 +124,8 @@ Use the absolute path of your clone. Environment variables for the server go bef
 ### The Claude Code skill
 
 The server tells Claude what its tools do; the **`relay-bridge` skill** tells it how to work with them — when to
-delegate, `neon` or `argon` and which effort, how to write a task, how to review and integrate the result. Install it
-once as a personal skill (a symlink, so it updates with the clone):
+delegate, `hydrogen`, `neon` or `carbon` and which effort, how to write a task, how to review and integrate the
+result. Install it once as a personal skill (a symlink, so it updates with the clone):
 
 ```bash
 npm run skill:install   # ~/.claude/skills/relay-bridge -> ./skills/relay-bridge
@@ -132,7 +139,7 @@ plus the project's own conventions (branch naming, whether agents may push).
 
 | Tool                    | What it does                                                                                                  |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `list_available_models` | Neon and Argon as the account has them: real ids, confirmed efforts, availability                             |
+| `list_available_models` | Hydrogen, Neon and Carbon as the account has them: real ids, confirmed efforts, availability                  |
 | `delegate_task`         | starts a task asynchronously and returns its `task_id`                                                        |
 | `list_agent_tasks`      | tasks, newest first, filtered by status — including tasks started from other Claude Code sessions             |
 | `check_agent_status`    | status and live progress (steps, tool calls, last command or file, denials); `wait_seconds` waits up to 300 s |
