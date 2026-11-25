@@ -3,6 +3,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config.js";
 import { AntigravityProvider } from "../src/providers/antigravity/provider.js";
+import { MODEL_ALIASES } from "../src/providers/types.js";
 import { ProviderRegistry } from "../src/providers/registry.js";
 import { TaskManager } from "../src/tasks/manager.js";
 import { TaskStore } from "../src/tasks/store.js";
@@ -41,15 +42,23 @@ describe.runIf(enabled)("Antigravity CLI (real account)", () => {
     await cleanupAll();
   });
 
-  it("discovers Neon and Argon and their effort levels from the account", async () => {
+  it("discovers Hydrogen, Neon and Carbon and their effort levels from the account", async () => {
     const description = await provider.describe({ refresh: true });
     expect(description.cliVersion).toMatch(/\d+\.\d+/);
-    expect(description.aliases.neon.available).toBe(true);
-    expect(description.aliases.neon.efforts).toEqual(expect.arrayContaining(["low", "medium", "high"]));
-    expect(description.aliases.argon.available).toBe(true);
-    expect(description.aliases.argon.variants.every((v) => /argon/i.test(v.modelId))).toBe(true);
+    for (const alias of MODEL_ALIASES) {
+      const resolution = description.aliases[alias];
+      expect(resolution.available, alias).toBe(true);
+      expect(resolution.efforts, alias).toEqual(expect.arrayContaining(["low", "medium", "high"]));
+      expect(
+        resolution.variants.every((v) => new RegExp(alias, "i").test(v.modelId)),
+        alias,
+      ).toBe(true);
+    }
+    expect(Object.values(description.aliases).flatMap((a) => a.variants.map((v) => v.modelId))).not.toEqual(
+      expect.arrayContaining([expect.stringMatching(/argon|orchestrator/)]),
+    );
     process.stderr.write(
-      `  neon: ${description.aliases.neon.efforts.join(",")} argon: ${description.aliases.argon.efforts.join(",")}\n`,
+      `  ${MODEL_ALIASES.map((alias) => `${alias}: ${description.aliases[alias].efforts.join(",")}`).join(" ")}\n`,
     );
   });
 
@@ -142,12 +151,12 @@ describe.runIf(enabled)("Antigravity CLI (real account)", () => {
     expect((done.verification as ReadOnlyVerification).changedPaths).toEqual([]);
   });
 
-  it("runs a reasoning task on Argon", async () => {
+  it("runs a reasoning task on Carbon", async () => {
     const task = await manager.delegate(
       request({
         workingDirectory: makeRepo(),
         mode: "read_only",
-        model: "argon",
+        model: "carbon",
         effort: "low",
         task: "Without running anything: in findings, give the time complexity of binary search and one sentence why.",
         timeoutMinutes: 10,
@@ -155,8 +164,25 @@ describe.runIf(enabled)("Antigravity CLI (real account)", () => {
     );
     const done = await manager.waitFor(task.id, 10 * 60);
     expect(done.status).toBe("completed");
-    expect(done.model.id).toMatch(/argon-low$/);
+    expect(done.model.id).toMatch(/carbon-low$/);
     expect(done.report?.findings.join(" ").toLowerCase()).toMatch(/log/);
+  });
+
+  it("runs a quick lookup on Hydrogen", async () => {
+    const task = await manager.delegate(
+      request({
+        workingDirectory: makeRepo(),
+        mode: "read_only",
+        model: "hydrogen",
+        effort: "low",
+        task: "Read the repository's README.md and, in findings, quote its first line exactly. Change nothing.",
+        timeoutMinutes: 10,
+      }),
+    );
+    const done = await manager.waitFor(task.id, 10 * 60);
+    expect(done.status).toBe("completed");
+    expect(done.model.id).toMatch(/hydrogen-low$/);
+    expect(done.report?.findings.length).toBeGreaterThan(0);
   });
 
   it("cancels a running agent", async () => {

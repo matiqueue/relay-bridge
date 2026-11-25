@@ -18,7 +18,16 @@ import {
 import { compactEventLine } from "../providers/antigravity/events.js";
 import { buildPolicy } from "../providers/antigravity/policy.js";
 import type { ProviderRegistry } from "../providers/registry.js";
-import type { AgentProvider, Effort, ExecutionMode, ModelAlias, ProviderEvent } from "../providers/types.js";
+import {
+  isModelAlias,
+  MODEL_ALIASES,
+  RETIRED_MODEL_ALIASES,
+  type AgentProvider,
+  type Effort,
+  type ExecutionMode,
+  type ModelAlias,
+  type ProviderEvent,
+} from "../providers/types.js";
 import { buildBrief, type BriefInput } from "../prompt/brief.js";
 import { parseReport, REPORT_JSON_SCHEMA } from "../prompt/report.js";
 import { slugify, validateBranchName, validateDirectory } from "../security/paths.js";
@@ -106,6 +115,21 @@ export function missingReport(
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+/**
+ * The alias a revision keeps when it names none. A task recorded on an alias that has since been retired (argon) is
+ * not moved to another model silently: the orchestrator has to choose one.
+ */
+function revisionAlias(parent: TaskRecord): ModelAlias {
+  const alias: string = parent.model.alias;
+  if (isModelAlias(alias)) return alias;
+  const successor = RETIRED_MODEL_ALIASES[alias];
+  throw new RelayError(
+    "MODEL_UNAVAILABLE",
+    `Task ${parent.id} ran on "${alias}", which Relay Bridge no longer uses. Pass model for the revision (${MODEL_ALIASES.join(", ")})${successor ? `; "${successor}" took over its role` : ""}. Relay Bridge does not choose another model for you.`,
+    { alias, available: [...MODEL_ALIASES], successor },
+  );
 }
 
 function titleOf(task: string, title: string | undefined): string {
@@ -347,7 +371,7 @@ export class TaskManager {
     if (request.instructions.trim().length < 10)
       throw new RelayError("INVALID_INPUT", "Describe the requested changes.");
     const provider = this.providers.get(parent.provider);
-    const model = await provider.resolveModel(request.model ?? parent.model.alias, request.effort ?? parent.effort);
+    const model = await provider.resolveModel(request.model ?? revisionAlias(parent), request.effort ?? parent.effort);
     const id = newTaskId();
     const paths = this.store.paths(id);
 

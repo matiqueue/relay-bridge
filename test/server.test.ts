@@ -44,10 +44,11 @@ describe("MCP server", () => {
     expect(delegate?.inputSchema.required).toEqual(
       expect.arrayContaining(["task", "working_directory", "execution_mode"]),
     );
-    expect(client.getInstructions()).toMatch(/neon/);
+    expect(client.getInstructions()).toMatch(/"hydrogen".*"neon" \(default\).*"carbon"/);
+    expect(client.getInstructions()).not.toMatch(/argon/);
   });
 
-  it("lists neon and argon with their real ids and efforts", async () => {
+  it("lists hydrogen, neon and carbon with their real ids and efforts", async () => {
     const { client } = await connect();
     const { body } = await call(client, "list_available_models");
     const models = body.providers[0].models as {
@@ -57,10 +58,13 @@ describe("MCP server", () => {
       variants: { model_id: string }[];
     }[];
     expect(models.map((m) => [m.alias, m.available, m.efforts])).toEqual([
+      ["hydrogen", true, ["low", "medium", "high", "xhigh"]],
       ["neon", true, ["low", "medium", "high", "xhigh"]],
-      ["argon", true, ["low", "medium", "high"]],
+      ["carbon", true, ["low", "medium", "high"]],
     ]);
-    expect(models[0]?.variants.map((v) => v.model_id)).toContain("gemini-4-neon-xhigh");
+    expect(models[1]?.variants.map((v) => v.model_id)).toContain("gemini-4-neon-xhigh");
+    expect(models.flatMap((m) => m.variants.map((v) => v.model_id)).some((id) => id.includes("argon"))).toBe(false);
+    expect(Object.keys(body.guidance as object)).toEqual(["hydrogen", "neon", "carbon"]);
     expect(body.providers[0].other_models_on_account_not_used).toBeGreaterThan(0);
   });
 
@@ -109,7 +113,7 @@ describe("MCP server", () => {
   it("returns errors as tool errors with a code and an actionable message", async () => {
     const { client } = await connect();
     const unsupported = await call(client, "delegate_task", {
-      model: "argon",
+      model: "carbon",
       effort: "xhigh",
       task: "A task long enough to pass validation.",
       working_directory: makeRepo(),
@@ -128,6 +132,22 @@ describe("MCP server", () => {
       execution_mode: "read_only",
     });
     expect(relative.body.error).toBe("INVALID_INPUT");
+  });
+
+  it("no longer accepts the retired argon alias", async () => {
+    const { client } = await connect();
+    const result = (await client.callTool({
+      name: "delegate_task",
+      arguments: {
+        model: "argon",
+        task: "A task long enough to pass validation.",
+        working_directory: makeRepo(),
+        execution_mode: "read_only",
+      },
+    })) as CallToolResult;
+    expect(result.isError).toBe(true);
+    const first = result.content[0];
+    expect(first?.type === "text" ? first.text : "").toMatch(/hydrogen.*neon.*carbon/s);
   });
 
   it("cancels through the tool", async () => {

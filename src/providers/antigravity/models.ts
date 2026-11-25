@@ -4,8 +4,8 @@ import { EFFORTS, type AliasResolution, type Effort, type ModelAlias, type Model
  * Model discovery for the Antigravity CLI. Nothing here hardcodes a model identifier: `agy models` lists the
  * account's models as "<id>\t<label>", and an alias is matched by the family name in both the id and the label
  * ("gemini-4-neon-high" / "Gemini 4 Neon (High)"). When the account has several generations of a family, the newest
- * one is used. Orchestrator variants ("Orchestrator (Neon)") are a different product (a planner + executor pair) and
- * are never matched.
+ * one is used. Orchestrator variants ("Orchestrator (Neon)", "Orchestrator (Carbon)") are a different product (a
+ * planner + executor pair) and are never matched; neither are families that are not an alias (Argon, Flash).
  */
 export interface ListedModel {
   readonly id: string;

@@ -1,17 +1,25 @@
 import { describe, expect, it } from "vitest";
 import { otherModels, parseEffortProbe, parseModelList, resolveAlias } from "../src/providers/antigravity/models.js";
+import { MODEL_ALIASES } from "../src/providers/types.js";
 
-// The format of `agy models` (1.5.15): a progress line, then "<id>\t<label>"
+// The format of `agy models` (1.5.16): a progress line, then "<id>\t<label>", in the CLI's own order
 const LISTING = `Fetching available models...
 gemini-4-neon-high\tGemini 4 Neon (High)
 gemini-4-neon-xhigh\tGemini 4 Neon (XHigh)
 gemini-4-neon-medium\tGemini 4 Neon (Medium)
 gemini-4-neon-low\tGemini 4 Neon (Low)
 gemini-4-carbon-medium\tGemini 4 Carbon (Medium)
+gemini-4-carbon-high\tGemini 4 Carbon (High)
+gemini-4-carbon-low\tGemini 4 Carbon (Low)
 gemini-4-argon-medium\tGemini 4 Argon (Medium)
 gemini-4-argon-high\tGemini 4 Argon (High)
 gemini-4-argon-low\tGemini 4 Argon (Low)
+gemini-4-hydrogen-high\tGemini 4 Hydrogen (High)
+gemini-4-hydrogen-xhigh\tGemini 4 Hydrogen (XHigh)
+gemini-4-hydrogen-medium\tGemini 4 Hydrogen (Medium)
+gemini-4-hydrogen-low\tGemini 4 Hydrogen (Low)
 gemini-pro-orchestrator-neon\tOrchestrator (Neon)
+gemini-pro-orchestrator\tOrchestrator (Carbon)
 gemini-pro-orchestrator-argon\tOrchestrator (Argon)
 gemini-3.8-flash-high\tGemini 3.8 Flash (High)
 claude-opus-5-5-high\tClaude Opus 5.5 (High)
@@ -20,7 +28,7 @@ claude-opus-5-5-high\tClaude Opus 5.5 (High)
 describe("parseModelList", () => {
   it("reads ids and labels and skips the progress line", () => {
     const models = parseModelList(LISTING);
-    expect(models).toHaveLength(12);
+    expect(models).toHaveLength(19);
     expect(models[0]).toEqual({ id: "gemini-4-neon-high", label: "Gemini 4 Neon (High)" });
   });
 
@@ -48,8 +56,25 @@ describe("resolveAlias", () => {
     expect(neon.variants.some((v) => v.modelId.includes("orchestrator"))).toBe(false);
   });
 
-  it("maps argon to the levels the account has", () => {
-    expect(resolveAlias(models, "argon").efforts).toEqual(["low", "medium", "high"]);
+  it("maps hydrogen and carbon to their own families and the levels the account has", () => {
+    const hydrogen = resolveAlias(models, "hydrogen");
+    expect(hydrogen.family).toBe("Gemini 4 Hydrogen");
+    expect(hydrogen.efforts).toEqual(["low", "medium", "high", "xhigh"]);
+    expect(hydrogen.variants.every((v) => v.modelId.startsWith("gemini-4-hydrogen-"))).toBe(true);
+    const carbon = resolveAlias(models, "carbon");
+    expect(carbon.family).toBe("Gemini 4 Carbon");
+    expect(carbon.efforts).toEqual(["low", "medium", "high"]);
+    expect(carbon.variants.map((v) => v.modelId)).toEqual([
+      "gemini-4-carbon-low",
+      "gemini-4-carbon-medium",
+      "gemini-4-carbon-high",
+    ]);
+  });
+
+  it("never maps an alias to Argon or to the Carbon orchestrator", () => {
+    const ids = MODEL_ALIASES.flatMap((alias) => resolveAlias(models, alias).variants.map((v) => v.modelId));
+    expect(ids.some((id) => id.includes("argon"))).toBe(false);
+    expect(ids).not.toContain("gemini-pro-orchestrator");
   });
 
   it("uses the newest generation when several are listed", () => {
@@ -69,18 +94,21 @@ describe("resolveAlias", () => {
   });
 
   it("reports an unavailable alias instead of substituting another model", () => {
-    const withoutArgon = models.filter((m) => !m.id.includes("argon"));
-    const argon = resolveAlias(withoutArgon, "argon");
-    expect(argon.available).toBe(false);
-    expect(argon.variants).toEqual([]);
-    expect(argon.note).toMatch(/No Gemini argon model/);
+    const withoutCarbon = models.filter((m) => !m.id.includes("carbon"));
+    const carbon = resolveAlias(withoutCarbon, "carbon");
+    expect(carbon.available).toBe(false);
+    expect(carbon.variants).toEqual([]);
+    expect(carbon.note).toMatch(/No Gemini carbon model/);
   });
 
   it("lists the remaining models for transparency", () => {
-    const used = [resolveAlias(models, "neon"), resolveAlias(models, "argon")];
+    const used = MODEL_ALIASES.map((alias) => resolveAlias(models, alias));
     expect(otherModels(models, used)).toEqual([
-      "Gemini 4 Carbon (Medium)",
+      "Gemini 4 Argon (Medium)",
+      "Gemini 4 Argon (High)",
+      "Gemini 4 Argon (Low)",
       "Orchestrator (Neon)",
+      "Orchestrator (Carbon)",
       "Orchestrator (Argon)",
       "Gemini 3.8 Flash (High)",
       "Claude Opus 5.5 (High)",

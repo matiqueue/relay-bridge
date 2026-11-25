@@ -6,8 +6,8 @@ Start with:
 npm run doctor
 ```
 
-It checks Node, git, gh, the data directory, the Antigravity CLI, its sign-in, and Neon and Argon with their effort
-levels — the same way the MCP server sees them.
+It checks Node, git, gh, the data directory, the Antigravity CLI, its sign-in, and Hydrogen, Neon and Carbon with
+their effort levels — the same way the MCP server sees them.
 
 ## The server does not show up in Claude Code
 
@@ -27,10 +27,12 @@ levels — the same way the MCP server sees them.
 
 ## `MODEL_UNAVAILABLE` / `EFFORT_UNSUPPORTED`
 
-- `list_available_models` (or `agy models`) shows what the account has. Neon and Argon need a plan that includes them
-  (Google AI Pro or Ultra at the time of writing; Pro trials may not include every model). Relay Bridge never falls
-  back to another model.
-- Effort levels differ per model: Argon has no `xhigh` on current accounts. The error lists the supported levels.
+- `list_available_models` (or `agy models`) shows what the account has. Hydrogen, Neon and Carbon need a plan that
+  includes them (Google AI Pro or Ultra at the time of writing; Pro trials may not include every model). Relay Bridge
+  never falls back to another model.
+- Effort levels differ per model: Carbon has no `xhigh` on current accounts. The error lists the supported levels.
+- `argon` is retired. `delegate_task` rejects it; revising a task that ran on Argon fails with `MODEL_UNAVAILABLE`
+  until you pass `model` (usually `carbon`, which took over Argon's role).
 - After a plan change, `list_available_models` with `refresh: true` re-reads the account.
 
 ## A task failed
@@ -72,5 +74,5 @@ status`), keep what you need, then clean up.
 ## Quota
 
 Each run uses your Antigravity plan's quota (it refreshes every few hours on paid plans). Lower
-`RELAY_BRIDGE_MAX_CONCURRENCY`, use lower efforts for simple work, and prefer Neon over Argon unless the task needs
-Argon.
+`RELAY_BRIDGE_MAX_CONCURRENCY`, use lower efforts for simple work, send routine work to Hydrogen, and prefer Neon
+over Carbon unless the task needs Carbon.

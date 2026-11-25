@@ -3,7 +3,7 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { toRelayError } from "./errors.js";
 import type { ProviderRegistry } from "./providers/registry.js";
-import { EFFORTS, MODEL_ALIASES } from "./providers/types.js";
+import { DEFAULT_MODEL_ALIAS, EFFORTS, MODEL_ALIASES } from "./providers/types.js";
 import type { TaskManager } from "./tasks/manager.js";
 import type { TaskStore } from "./tasks/store.js";
 import { TASK_STATUSES } from "./tasks/types.js";
@@ -41,7 +41,7 @@ const absolutePath = z.string().min(1).max(4096);
 const SERVER_INSTRUCTIONS = `Relay Bridge lets you (the lead) delegate real repository work to Gemini through the Google Antigravity CLI.
 Delegated tasks run asynchronously in their own git worktree and branch (or read-only), and end with a structured report plus facts Relay Bridge verified itself (branch, commits, files, push, pull request).
 Workflow: list_available_models once per session → delegate_task (returns a task_id at once) → keep working → check_agent_status (wait_seconds to wait) → get_agent_result → review the diff and checks yourself → request_task_revision for changes → integrate yourself.
-Models: "neon" is the default executor (best quality per quota); "argon" is for the hardest problems. No other model is ever used. Pick the effort per task.
+Models: "hydrogen" for fast, routine, low-latency work; "neon" (default) for everyday complex work and standard coding; "carbon" for the hardest problems (deep reasoning, architecture planning, long verification). No other model is ever used. Pick the model and the effort per task.
 You stay responsible for architecture, review and integration: delegated agents never merge, never push to integration branches and never force-push.`;
 
 export function createServer(manager: TaskManager, store: TaskStore, providers: ProviderRegistry): McpServer {
@@ -52,7 +52,7 @@ export function createServer(manager: TaskManager, store: TaskStore, providers: 
     {
       title: "List available models",
       description:
-        "Lists the models Relay Bridge can delegate to, discovered live from the signed-in Antigravity account: the aliases neon (default executor) and argon (hardest tasks), the real model ids behind them, and the effort levels each one supports (confirmed with the CLI). Also reports whether an alias is unavailable on the account. Cached for a few minutes; refresh: true forces a new lookup.",
+        "Lists the models Relay Bridge can delegate to, discovered live from the signed-in Antigravity account: the aliases hydrogen (fast, routine work), neon (default executor) and carbon (hardest problems), the real model ids behind them, and the effort levels each one supports (confirmed with the CLI). Also reports whether an alias is unavailable on the account. Cached for a few minutes; refresh: true forces a new lookup.",
       inputSchema: {
         refresh: z.boolean().optional().describe("Bypass the cache and ask the CLI again."),
       },
@@ -78,9 +78,11 @@ export function createServer(manager: TaskManager, store: TaskStore, providers: 
             other_models_on_account_not_used: d.otherModels.length,
           })),
           guidance: {
-            neon: "Default. Features, components, endpoints, refactors, tests, typical bugs, docs, config analysis, migrations, repetitive changes. low/medium for simple or mechanical work, medium/high for typical work, high/xhigh for harder implementations.",
-            argon:
-              "Hard architecture questions, complex bugs, intricate algorithms, demanding analysis and code review that needs maximum reasoning. Usually high (its highest level).",
+            hydrogen:
+              "Fast, routine work and operations that need low latency: mechanical or repetitive edits, renames, formatting, version bumps, small fixes with a known cause, quick read-only lookups and summaries. Usually low/medium. Move to neon when the task turns out to need real design or debugging.",
+            neon: "Default. Everyday complex work and standard coding: features, components, endpoints, refactors, tests, typical bugs, docs, configuration analysis, migrations. low/medium for simple work, medium/high for typical work, high/xhigh for harder implementations across many files.",
+            carbon:
+              "The hardest problems: deep reasoning, architecture planning, complex bugs (concurrency, hard-to-reproduce failures), intricate algorithms, long verification and demanding code review. Usually high (its highest level). Reserve it for work neon cannot do well: quota is shared.",
           },
         };
       }),
@@ -96,18 +98,21 @@ execution_mode:
 - "modify": works in a new git worktree on its own branch (isolation "worktree", default) created from base_ref (default: the current branch), runs the project's checks and commits (commit: true by default). Set push: true to push the branch, open_pull_request: true to also open a draft PR. Your own checkout is not touched. Pass branch to follow the repository's branch naming convention; otherwise relay/<task-id>-<slug> is used.
 - "read_only": analysis, review, research. The repository is mounted read-only in the agent's sandbox; the answers come back in the report's findings. Works in any directory, git or not.
 reference_directories: other repositories or folders the agent may read (never write), e.g. a repository whose configuration it should study.
-Choose model "neon" (default) or "argon" (hardest work) and an effort the model supports (list_available_models).`,
+Choose model "hydrogen" (fast, routine work), "neon" (default: everyday complex work and coding) or "carbon" (hardest problems: deep reasoning, architecture, long verification) and an effort the model supports (list_available_models).`,
       inputSchema: {
         provider: z
           .enum(["antigravity"])
           .default("antigravity")
           .describe("The executor. Only Gemini via Antigravity today."),
-        model: z.enum(MODEL_ALIASES).default("neon").describe("neon (default executor) or argon (hardest tasks)."),
+        model: z
+          .enum(MODEL_ALIASES)
+          .default(DEFAULT_MODEL_ALIAS)
+          .describe("hydrogen (fast, routine work), neon (default executor) or carbon (hardest problems)."),
         effort: z
           .enum(EFFORTS)
           .default("medium")
           .describe(
-            "Reasoning effort; must be supported by the model (neon: up to xhigh, argon: up to high on current accounts).",
+            "Reasoning effort; must be supported by the model (hydrogen and neon: up to xhigh, carbon: up to high on current accounts).",
           ),
         task: z.string().min(20).max(100_000).describe("The full, self-contained task description."),
         title: z
@@ -293,7 +298,12 @@ Choose model "neon" (default) or "argon" (hardest work) and an effort the model 
       inputSchema: {
         task_id: taskId.describe("The finished task to revise (or a previous revision)."),
         instructions: z.string().min(10).max(50_000).describe("The requested changes."),
-        model: z.enum(MODEL_ALIASES).optional().describe("Switch model for the revision (default: the same)."),
+        model: z
+          .enum(MODEL_ALIASES)
+          .optional()
+          .describe(
+            "Switch model for the revision (default: the same; required when the task ran on a retired model such as argon).",
+          ),
         effort: z.enum(EFFORTS).optional().describe("Switch effort (default: the same)."),
         continue_conversation: z.boolean().optional().describe("Resume the previous conversation (default true)."),
         push: z.boolean().optional().describe("Override push (default: as before)."),

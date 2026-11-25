@@ -14,8 +14,8 @@ npm run build
 npm run doctor
 ```
 
-`doctor` must show the Antigravity CLI signed in and both `neon` and `argon` available. If `agy` was never signed
-in, run `agy` once in a terminal and sign in with your Google account first.
+`doctor` must show the Antigravity CLI signed in and `hydrogen`, `neon` and `carbon` available. If `agy` was never
+signed in, run `agy` once in a terminal and sign in with your Google account first.
 
 ## 2. Register the server in user scope
 

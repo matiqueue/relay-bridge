@@ -28,7 +28,7 @@ npm run check              # format:check, typecheck (TypeScript 7), lint (typed
 npm run test               # unit tests only (Vitest); a stand-in CLI (test/fixtures/fake-agy.mjs) and real git repos
 npm run test:integration   # real Antigravity CLI runs: needs a signed-in account, uses quota, takes minutes
 npm run build              # dist/
-npm run doctor             # checks agy, the account, Neon/Argon and the data directory
+npm run doctor             # checks agy, the account, Hydrogen/Neon/Carbon and the data directory
 npm run skill:install      # links skills/relay-bridge into ~/.claude/skills (test/skill.test.ts keeps it in sync)
 ```
 
@@ -38,8 +38,10 @@ npm run skill:install      # links skills/relay-bridge into ~/.claude/skills (te
 
 - **stdout is the MCP protocol.** Never write to it from the server; diagnostics go through `src/logger.ts` (stderr).
 - **No shell, ever.** Programs start through `runCommand`/`spawn` with argument arrays (`src/util/process.ts`).
-- **No hardcoded model ids.** `neon`/`argon` are resolved from `agy models` (`src/providers/antigravity/models.ts`);
-  never add a fallback to another model.
+- **No hardcoded model ids.** `hydrogen`/`neon`/`carbon` are resolved from `agy models`
+  (`src/providers/antigravity/models.ts`); never add a fallback to another model. `argon` is retired: never
+  re-add it, and never map an old record's alias to another model silently (`RETIRED_MODEL_ALIASES` only names the
+  successor in errors).
 - **Policy regexes are RE2** (the CLI is a native binary): no lookahead, no backreferences. `test/policy.test.ts`
   checks the deny list against real command lines — extend it with every rule you add.
 - **A finished record is written once**, with status, report and verification together (`finalize` in

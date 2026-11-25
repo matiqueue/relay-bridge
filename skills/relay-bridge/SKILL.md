@@ -1,6 +1,6 @@
 ---
 name: relay-bridge
-description: Delegate real repository work to Gemini through the Relay Bridge MCP tools (delegate_task, check_agent_status, get_agent_result, request_task_revision). Covers when to delegate, choosing neon or argon and the effort, writing a self-contained task, working_directory, read-only analysis of other repositories, task branches, push and draft pull requests, parallel tasks, reviewing the verified result and integrating it. Use whenever you plan, split or start coding, testing, refactoring, migration, documentation, configuration-analysis or review work in a local git repository that another agent could do on its own, and whenever the user mentions Relay Bridge, Gemini, Antigravity, delegating or offloading work.
+description: Delegate real repository work to Gemini through the Relay Bridge MCP tools (delegate_task, check_agent_status, get_agent_result, request_task_revision). Covers when to delegate, choosing hydrogen (fast, routine work), neon (default) or carbon (hardest problems) and the effort, writing a self-contained task, working_directory, read-only analysis of other repositories, task branches, push and draft pull requests, parallel tasks, reviewing the verified result and integrating it. Use whenever you plan, split or start coding, testing, refactoring, migration, documentation, configuration-analysis or review work in a local git repository that another agent could do on its own, and whenever the user mentions Relay Bridge, Gemini, Antigravity, delegating or offloading work.
 allowed-tools: mcp__relay-bridge__list_available_models mcp__relay-bridge__list_agent_tasks mcp__relay-bridge__check_agent_status mcp__relay-bridge__get_agent_result
 ---
 
@@ -43,23 +43,39 @@ provider.
 
 ## Model and effort
 
-Only two models exist for you, and Relay Bridge never substitutes another:
+Three models, one per kind of work. Relay Bridge never substitutes another, and nothing else is ever used:
 
-- **`neon`** — the default executor, best quality for the quota: features, components, endpoints, refactors, tests,
-  typical bugs, docs, configuration analysis, migrations, repetitive changes. Most tasks.
-- **`argon`** — the hardest problems: architecture questions, complex bugs (concurrency, hard-to-reproduce failures),
-  intricate algorithms, demanding analysis and code review.
+- **`hydrogen`** (Gemini 4 Hydrogen) — fast, routine work and operations that need low latency: mechanical or
+  repetitive edits, renames, formatting, version bumps, small fixes whose cause is already known, quick read-only
+  lookups ("where is X used", "which files import Y"), summaries of a file or a diff.
+- **`neon`** (Gemini 4 Neon) — **the default**: everyday complex work and standard coding: features, components,
+  endpoints, refactors, tests, typical bugs, docs, configuration analysis, migrations. Most tasks.
+- **`carbon`** (Gemini 4 Carbon) — the hardest problems: deep reasoning, architecture planning, complex bugs
+  (concurrency, hard-to-reproduce failures), intricate algorithms, long verification, demanding analysis and code
+  review.
 
-| Task                                         | Start with                 |
-| -------------------------------------------- | -------------------------- |
-| Simple, mechanical                           | neon `low` / `medium`      |
-| Typical development                          | neon `medium` / `high`     |
-| Harder implementation, many files            | neon `high` / `xhigh`      |
-| Complex bug                                  | argon `high`               |
-| Hard architecture analysis, demanding review | argon at its highest level |
+| Task                                                                 | Start with                   |
+| -------------------------------------------------------------------- | ---------------------------- |
+| Quick, routine or mechanical; latency matters more than depth        | hydrogen `low` / `medium`    |
+| Larger mechanical change with a clear recipe (many files, no design) | hydrogen `high` / neon `low` |
+| Typical development                                                  | neon `medium` / `high`       |
+| Harder implementation, many files                                    | neon `high` / `xhigh`        |
+| Complex bug, deep reasoning                                          | carbon `high`                |
+| Architecture planning, long verification, demanding review           | carbon at its highest level  |
 
-Efforts differ per model (argon has no `xhigh` on current accounts); `list_available_models` is the truth. Quota is
-shared: do not use argon or a high effort where neon `medium` will do.
+How to choose:
+
+- **Default to `neon`.** Choose `hydrogen` only when the task is routine and fully specified — the agent should not
+  have to design anything or find a cause. Choose `carbon` only when the task is genuinely hard or the cost of a wrong
+  answer is high.
+- **Escalate instead of over-provisioning.** When Hydrogen's result shows the task needed judgment, revise it on
+  `neon`; when Neon is stuck on a hard problem, revise it on `carbon` (`request_task_revision` can switch the model).
+- **A split often mixes tiers:** a `carbon` read-only analysis that plans the change, `neon` tasks that implement it,
+  `hydrogen` for the mechanical follow-ups.
+- Efforts differ per model (carbon has no `xhigh` on current accounts); `list_available_models` is the truth. Quota is
+  shared: do not use carbon or a high effort where neon `medium` will do.
+- **`argon` is retired.** It is no longer accepted; Carbon took over its role. A task recorded on Argon can still be
+  read; to revise it, pass `model` explicitly.
 
 ## Writing the task
 
@@ -124,7 +140,8 @@ the worktree, go through `review_checklist`, and judge the change against the ar
 
 `request_task_revision` with the finished `task_id` and specific instructions: what to change, why, how to verify. It
 continues on the same branch and worktree with new commits, usually in the same Gemini conversation. You may switch
-the model or the effort — for example to argon when neon is stuck on a hard problem.
+the model or the effort — for example to neon when hydrogen's result shows the task needed judgment, or to carbon
+when neon is stuck on a hard problem. A task that ran on the retired `argon` needs an explicit `model` here.
 
 ## Parallel tasks
 
