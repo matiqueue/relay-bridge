@@ -1,6 +1,6 @@
 {
   "name": "relay-bridge",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A local MCP server that lets Claude Code delegate real repository work to other AI coding agents, starting with Gemini through the Google Antigravity CLI.",
   "private": true,
   "license": "UNLICENSED",
