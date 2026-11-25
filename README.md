@@ -81,8 +81,11 @@ answered locally). On a current Google AI Pro account that gives:
 | `neon`     | `low`, `medium`, `high`, `xhigh` |
 | `carbon`   | `low`, `medium`, `high`          |
 
-`list_available_models` always shows what _your_ account has. A missing model or an unsupported effort is a clear
-error (`MODEL_UNAVAILABLE`, `EFFORT_UNSUPPORTED` with the supported levels), never a silent substitution.
+`list_available_models` always shows what _your_ account has. When all three aliases are listed, each runs strictly on
+its own model; if a requested alias is unavailable on the account (for example, only `hydrogen` is available), Relay
+Bridge falls back to an available alias and records a warning on the task (`MODEL_UNAVAILABLE` only if none of the
+three exist). Unsupported effort levels and retired `argon` always fail explicitly (`EFFORT_UNSUPPORTED`,
+`MODEL_UNAVAILABLE`).
 
 A reasonable policy, which the orchestrator adapts per task: quick, routine or mechanical work → Hydrogen
 `low`/`medium`; typical work → Neon `medium`/`high`; harder implementations → Neon `high`/`xhigh`; complex bugs →
@@ -200,9 +203,9 @@ permission denials. Several tasks can run at once (`RELAY_BRIDGE_MAX_CONCURRENCY
 `queued`. Tasks keep running when the Claude Code session that started them ends: the next Relay Bridge instance
 adopts them.
 
-To inspect local usage across models (task share, tokens, completion rate, average duration) without spending any model
-tokens, run `npm run stats` (or `relay-stats [today|7d|24h|--json]`; inside Claude Code, `!relay-stats` runs it
-locally in the shell).
+To inspect local usage across models, sessions/tasks, projects and days without spending any model tokens, run
+`npm run stats` (or `relay-stats [summary|tasks|models|projects|daily|full|<task-id>] [today|7d|24h|2w] [-m …] [-s …] [-p …] [--sort …] [--json]`;
+inside Claude Code, `!relay-stats` runs it locally in the shell).
 
 ## Worktrees and branches
 

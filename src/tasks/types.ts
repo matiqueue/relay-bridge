@@ -68,6 +68,7 @@ export interface TaskOutcome {
   readonly finishedReason: string | undefined;
   readonly exitCode: number | null | undefined;
   readonly signal: string | null | undefined;
+  readonly errorCode?: string | undefined;
   readonly error: string | undefined;
   readonly response: string | undefined;
   readonly usage: TokenUsage | undefined;

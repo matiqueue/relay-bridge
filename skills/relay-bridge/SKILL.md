@@ -43,7 +43,9 @@ provider.
 
 ## Model and effort
 
-Three models, one per kind of work. Relay Bridge never substitutes another, and nothing else is ever used:
+Three models, one per kind of work. When all three are available on the account, each runs strictly on its own family
+(if only a subset — e.g. only `hydrogen` — is available in `agy models`, Relay Bridge falls back to an available tier
+and adds a warning on the task):
 
 - **`hydrogen`** (Gemini 4 Hydrogen) — fast, routine work and operations that need low latency: mechanical or
   repetitive edits, renames, formatting, version bumps, small fixes whose cause is already known, quick read-only

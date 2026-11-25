@@ -65,6 +65,7 @@ export function statusView(record: TaskRecord) {
       permission_denials: p.permissionDenials,
     },
     cancel_requested: record.cancelRequested,
+    error_code: record.outcome?.errorCode,
     error: record.outcome?.error,
     next: nextStep(record),
   };
@@ -81,6 +82,10 @@ function nextStep(record: TaskRecord): string {
     case "awaiting_input":
       return "The agent stopped waiting for input. Read get_agent_result and answer with request_task_revision.";
     case "failed":
+      if (record.outcome?.errorCode === "QUOTA_EXHAUSTED") {
+        return "Quota or rate limit was exhausted. Wait for quota to reset, lower concurrency/effort, or retry with another available model (e.g. hydrogen) via request_task_revision.";
+      }
+      return "Ended without completing. get_agent_result shows what was done; request_task_revision can continue it.";
     case "timed_out":
     case "cancelled":
       return "Ended without completing. get_agent_result shows what was done; request_task_revision can continue it.";
@@ -147,6 +152,7 @@ export async function resultView(record: TaskRecord, store: TaskStore, options: 
           cli_status: record.outcome.cliStatus,
           finished_reason: record.outcome.finishedReason,
           exit_code: record.outcome.exitCode,
+          error_code: record.outcome.errorCode,
           error: record.outcome.error,
           usage: record.outcome.usage,
           // The free-text answer only when there is no structured report

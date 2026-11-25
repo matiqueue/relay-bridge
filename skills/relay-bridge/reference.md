@@ -99,7 +99,8 @@ question: answer it with `request_task_revision`).
 | `NOT_A_GIT_REPOSITORY`                                             | `modify` needs git; use `read_only` for other directories                                                          |
 | `BRANCH_EXISTS`, `BRANCH_PROTECTED`                                | another branch name, or `request_task_revision` to continue existing work                                          |
 | `DIRTY_WORKING_TREE`                                               | `in_place` needs a clean tree; use the default worktree isolation                                                  |
-| `MODEL_UNAVAILABLE`, `EFFORT_UNSUPPORTED`                          | check `list_available_models`; never replace the model with another one; a retired `argon` task needs `model`      |
+| `MODEL_UNAVAILABLE`, `EFFORT_UNSUPPORTED`                          | check `list_available_models`; if no aliases exist or `argon` needs a new `model`                                  |
+| `QUOTA_EXHAUSTED`                                                  | wait for quota reset, lower concurrency/effort, or retry with a lighter model (e.g. `hydrogen`)                    |
 | `NOT_AUTHENTICATED`, `PROVIDER_UNAVAILABLE`                        | the user signs in by running `agy` once; `npm run doctor` in the Relay Bridge clone diagnoses it                   |
 | `TASK_NOT_FINISHED`, `TASK_ALREADY_FINISHED`, `WORKTREE_NOT_CLEAN` | wait for or cancel the task; commit, move or discard leftovers yourself first                                      |
 | status `failed` / `timed_out`                                      | read `outcome.error` and `permission_denials`, adjust the task or `timeout_minutes`, then revise or delegate again |

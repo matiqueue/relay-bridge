@@ -65,6 +65,8 @@ export interface ResolvedModel {
   readonly modelId: string;
   readonly label: string;
   readonly effort: Effort;
+  /** Set when the requested alias was missing from the account and another available alias was chosen instead. */
+  readonly fallbackFrom?: { readonly alias: ModelAlias; readonly effort: Effort; readonly reason: string } | undefined;
 }
 
 /** Normalised events of a run's stream. */

@@ -29,6 +29,7 @@ npm run test               # unit tests only (Vitest); a stand-in CLI (test/fixt
 npm run test:integration   # real Antigravity CLI runs: needs a signed-in account, uses quota, takes minutes
 npm run build              # dist/
 npm run doctor             # checks agy, the account, Hydrogen/Neon/Carbon and the data directory
+npm run stats              # local usage breakdown from ~/.relay-bridge/tasks (zero LLM tokens)
 npm run skill:install      # links skills/relay-bridge into ~/.claude/skills (test/skill.test.ts keeps it in sync)
 ```
 
@@ -39,9 +40,10 @@ npm run skill:install      # links skills/relay-bridge into ~/.claude/skills (te
 - **stdout is the MCP protocol.** Never write to it from the server; diagnostics go through `src/logger.ts` (stderr).
 - **No shell, ever.** Programs start through `runCommand`/`spawn` with argument arrays (`src/util/process.ts`).
 - **No hardcoded model ids.** `hydrogen`/`neon`/`carbon` are resolved from `agy models`
-  (`src/providers/antigravity/models.ts`); never add a fallback to another model. `argon` is retired: never
-  re-add it, and never map an old record's alias to another model silently (`RETIRED_MODEL_ALIASES` only names the
-  successor in errors).
+  (`src/providers/antigravity/models.ts`). When all three are available on the account, each alias uses its own family
+  strictly; if a requested alias is missing from `agy models` (e.g. only `hydrogen` is available), `resolveModel` falls
+  back to an available alias and logs a warning on the task. `argon` is retired: never re-add it, and never map an old
+  record's alias to another model silently (`RETIRED_MODEL_ALIASES` only names the successor in errors).
 - **Policy regexes are RE2** (the CLI is a native binary): no lookahead, no backreferences. `test/policy.test.ts`
   checks the deny list against real command lines — extend it with every rule you add.
 - **A finished record is written once**, with status, report and verification together (`finalize` in
