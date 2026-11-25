@@ -16,6 +16,19 @@ Release Please runs on `prod`: from the commits it builds a release pull request
 it tags the release. `sync-dev.yml` then opens a `prod -> dev` pull request, so `dev` gets the released version back
 (a repository admin merges it with a merge commit: `dev` accepts changes only through pull requests).
 
+The release flow has three pull requests. Their titles are fixed and follow the `<emoji> <Kind>: …` convention:
+
+| Pull request                | Title                                 | Opened by                                                      |
+| --------------------------- | ------------------------------------- | -------------------------------------------------------------- |
+| `dev -> prod`               | `🚀 Release: dev → prod`              | you (`pr-automation.yml` sets the title)                       |
+| `release-please--… -> prod` | `🔖 Release: relay-bridge v<version>` | Release Please (`pull-request-title-pattern` in its config)    |
+| `prod -> dev`               | `🔄 Sync: prod → dev`                 | `sync-dev.yml` (`pr-automation.yml` restores it after an edit) |
+
+Never rename the Release Please pull request by hand: Release Please reads its title to tag the release. Pull
+requests opened by workflows start no CI, so an admin merges the last two with the ruleset bypass. The workflows can
+open them only while _Settings → Actions → General → Allow GitHub Actions to create and approve pull requests_ is on
+(the workflow token itself stays read-only by default).
+
 ## 1. Start with an issue
 
 Not with code, not with a branch — with an issue. The branch name contains its number, and CI checks that the
