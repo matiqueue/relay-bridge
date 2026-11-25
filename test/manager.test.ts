@@ -230,6 +230,42 @@ describe("models", () => {
     }
   });
 });
+it("runs hydrogen on its own variant", async () => {
+  const { manager } = await harness();
+  const task = await manager.delegate(request({ workingDirectory: makeRepo(), model: "hydrogen", effort: "low" }));
+  expect(task.model).toEqual({ alias: "hydrogen", id: "gemini-4-hydrogen-low", label: "Gemini 4 Hydrogen (Low)" });
+  expect((await manager.waitFor(task.id, 20)).status).toBe("completed");
+});
+
+it("asks for a model when revising a task recorded on the retired argon alias", async () => {
+  const { manager, store } = await harness();
+  const first = await manager.waitFor((await manager.delegate(request({ workingDirectory: makeRepo() }))).id, 20);
+  // A record written by an earlier version: the alias and the id of a model Relay Bridge no longer uses
+  const file = store.paths(first.id).record;
+  const old = JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>;
+  old.model = { alias: "argon", id: "gemini-4-argon-high", label: "Gemini 4 Argon (High)" };
+  writeFileSync(file, JSON.stringify(old));
+
+  const revise = (model: "carbon" | undefined) =>
+    manager.revise({
+      taskId: first.id,
+      instructions: "Add one more change on top. [[fake:commit]]",
+      model,
+      effort: "high",
+      continueConversation: true,
+      push: undefined,
+      openPullRequest: undefined,
+      timeoutMinutes: undefined,
+    });
+  const error = await revise(undefined).catch((e: unknown) => e);
+  expect(error).toBeInstanceOf(RelayError);
+  expect((error as RelayError).code).toBe("MODEL_UNAVAILABLE");
+  expect((error as RelayError).message).toMatch(/"argon".*no longer uses.*"carbon" took over its role/);
+
+  const revision = await revise("carbon");
+  expect(revision.model.id).toBe("gemini-4-carbon-high");
+  expect((await manager.waitFor(revision.id, 20)).status).toBe("completed");
+});
 
 describe("outcomes", () => {
   it.each([
