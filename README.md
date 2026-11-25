@@ -290,9 +290,10 @@ provider: [docs/architecture.md](docs/architecture.md). Contribution flow: [CONT
 
 ## Status and limitations
 
-Verified against Antigravity CLI 1.5.15 on macOS with a Google AI Pro account: model and effort discovery, delegated
-changes on Neon in worktrees with commits, revisions resuming the conversation, read-only enforcement by the
-sandbox, tasks on Argon, cancellation, and the deny policy for destructive git operations.
+Verified against Antigravity CLI 1.5.16 on macOS with a Google AI Pro account: discovery of Hydrogen, Neon and Carbon
+and their efforts, delegated changes on Neon in worktrees with commits, revisions resuming the conversation,
+read-only enforcement by the sandbox, read-only tasks on Carbon and Hydrogen, and cancellation; the deny policy for
+destructive git operations was verified with 1.5.15.
 
 - **One provider.** Only Gemini through Antigravity is implemented; the provider boundary is there for more.
 - **`auto` mode is not used.** Relay Bridge runs `accept-edits` with the sandbox and its own policy, which behaves the
