@@ -21,16 +21,25 @@ const flag = (name) => {
 const emit = (event) => process.stdout.write(`${JSON.stringify(event)}\n`);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// The shape of a current account's `agy models` (1.5.16): Argon and the orchestrators are listed but never used
 const MODELS = [
   ["gemini-4-neon-high", "Gemini 4 Neon (High)"],
   ["gemini-4-neon-xhigh", "Gemini 4 Neon (XHigh)"],
   ["gemini-4-neon-medium", "Gemini 4 Neon (Medium)"],
   ["gemini-4-neon-low", "Gemini 4 Neon (Low)"],
   ["gemini-3-neon-high", "Gemini 3 Neon (High)"],
+  ["gemini-4-carbon-medium", "Gemini 4 Carbon (Medium)"],
+  ["gemini-4-carbon-high", "Gemini 4 Carbon (High)"],
+  ["gemini-4-carbon-low", "Gemini 4 Carbon (Low)"],
   ["gemini-4-argon-medium", "Gemini 4 Argon (Medium)"],
   ["gemini-4-argon-high", "Gemini 4 Argon (High)"],
   ["gemini-4-argon-low", "Gemini 4 Argon (Low)"],
+  ["gemini-4-hydrogen-high", "Gemini 4 Hydrogen (High)"],
+  ["gemini-4-hydrogen-xhigh", "Gemini 4 Hydrogen (XHigh)"],
+  ["gemini-4-hydrogen-medium", "Gemini 4 Hydrogen (Medium)"],
+  ["gemini-4-hydrogen-low", "Gemini 4 Hydrogen (Low)"],
   ["gemini-pro-orchestrator-neon", "Orchestrator (Neon)"],
+  ["gemini-pro-orchestrator", "Orchestrator (Carbon)"],
   ["gemini-pro-orchestrator-argon", "Orchestrator (Argon)"],
   ["gemini-3.8-flash-high", "Gemini 3.8 Flash (High)"],
 ];
@@ -47,7 +56,7 @@ if (args[0] === "models") {
   }
   process.stdout.write("Fetching available models...\n");
   for (const [id, label] of MODELS) {
-    if (process.env.FAKE_AGY_NO_ARGON === "1" && id.includes("argon")) continue;
+    if (process.env.FAKE_AGY_NO_CARBON === "1" && id.includes("carbon")) continue;
     process.stdout.write(`${id}\t${label}\n`);
   }
   process.exit(0);
@@ -62,7 +71,7 @@ if (prompt === undefined) {
 const model = flag("--model") ?? "gemini-4-neon-medium";
 
 if (prompt === "/effort") {
-  const available = model.includes("argon") ? ["low", "medium", "high"] : ["low", "medium", "high", "xhigh"];
+  const available = /carbon|argon/.test(model) ? ["low", "medium", "high"] : ["low", "medium", "high", "xhigh"];
   const current = model.split("-").pop();
   emit({
     conversation_id: "",

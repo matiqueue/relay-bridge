@@ -7,7 +7,7 @@ import { VERSION } from "../version.js";
 
 /**
  * `npm run doctor`: checks everything Relay Bridge needs, the way the MCP server will see it — Node, git, the
- * Antigravity CLI and its sign-in, the Neon and Argon models and their effort levels, and the data directory.
+ * Antigravity CLI and its sign-in, the Hydrogen, Neon and Carbon models and their effort levels, and the data directory.
  * Prints no secrets and no account details beyond what `agy models` lists.
  */
 const quiet = { info: () => undefined, warn: () => undefined, error: () => undefined };

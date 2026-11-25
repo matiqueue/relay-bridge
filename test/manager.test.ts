@@ -186,18 +186,18 @@ describe("models", () => {
     const repo = makeRepo();
     const { manager } = await harness();
     expect(
-      await codeOf(() => manager.delegate(request({ workingDirectory: repo, model: "argon", effort: "xhigh" }))),
+      await codeOf(() => manager.delegate(request({ workingDirectory: repo, model: "carbon", effort: "xhigh" }))),
     ).toBe("EFFORT_UNSUPPORTED");
-    const noArgon = await harness(testConfig());
-    process.env.FAKE_AGY_NO_ARGON = "1";
+    const noCarbon = await harness(testConfig());
+    process.env.FAKE_AGY_NO_CARBON = "1";
     try {
       expect(
         await codeOf(() =>
-          noArgon.manager.delegate(request({ workingDirectory: repo, model: "argon", effort: "high" })),
+          noCarbon.manager.delegate(request({ workingDirectory: repo, model: "carbon", effort: "high" })),
         ),
       ).toBe("MODEL_UNAVAILABLE");
     } finally {
-      delete process.env.FAKE_AGY_NO_ARGON;
+      delete process.env.FAKE_AGY_NO_CARBON;
     }
   });
 
@@ -206,13 +206,13 @@ describe("models", () => {
     process.env.FAKE_AGY_RECORD_DIR = record;
     try {
       const { manager } = await harness();
-      const task = await manager.delegate(request({ workingDirectory: makeRepo(), model: "argon", effort: "high" }));
+      const task = await manager.delegate(request({ workingDirectory: makeRepo(), model: "carbon", effort: "high" }));
       await manager.waitFor(task.id, 20);
       const runs = readdirSync(record).map(
         (f) => JSON.parse(readFileSync(path.join(record, f), "utf8")) as { args: string[]; env: { claude: string[] } },
       );
       const args = runs[0]?.args ?? [];
-      expect(args[args.indexOf("--model") + 1]).toBe("gemini-4-argon-high");
+      expect(args[args.indexOf("--model") + 1]).toBe("gemini-4-carbon-high");
       expect(args).toEqual(
         expect.arrayContaining([
           "--output-format",

@@ -7,8 +7,23 @@
  * implementation without touching the tools or the task manager.
  */
 
-export const MODEL_ALIASES = ["neon", "argon"] as const;
+/**
+ * The model tiers an orchestrator chooses from, lightest first: `hydrogen` for fast, routine, low-latency work,
+ * `neon` (the default) for everyday complex work and standard coding, `carbon` for the hardest problems.
+ */
+export const MODEL_ALIASES = ["hydrogen", "neon", "carbon"] as const;
 export type ModelAlias = (typeof MODEL_ALIASES)[number];
+export const DEFAULT_MODEL_ALIAS: ModelAlias = "neon";
+
+/**
+ * Aliases earlier versions accepted, with the alias that took over their role. Old task records may still name them;
+ * they are never resolved again, and the successor is only suggested in errors, never substituted.
+ */
+export const RETIRED_MODEL_ALIASES: Readonly<Record<string, ModelAlias>> = { argon: "carbon" };
+
+export function isModelAlias(value: string): value is ModelAlias {
+  return (MODEL_ALIASES as readonly string[]).includes(value);
+}
 
 export const EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
 export type Effort = (typeof EFFORTS)[number];
@@ -26,7 +41,7 @@ export interface ModelVariant {
 export interface AliasResolution {
   readonly alias: ModelAlias;
   readonly available: boolean;
-  /** Display name of the model family the alias resolved to, e.g. "Gemini 4 Neon". */
+  /** Display name of the model family the alias resolved to, e.g. "Gemini 4 Neon" or "Gemini 4 Carbon". */
   readonly family: string | undefined;
   readonly variants: readonly ModelVariant[];
   /** Effort levels confirmed by the provider for this family (may be narrower than the variants list). */
