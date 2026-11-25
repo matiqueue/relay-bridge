@@ -11,6 +11,7 @@ export type RelayErrorCode =
   | "BRANCH_PROTECTED"
   | "PROVIDER_UNAVAILABLE"
   | "NOT_AUTHENTICATED"
+  | "QUOTA_EXHAUSTED"
   | "MODEL_UNAVAILABLE"
   | "EFFORT_UNSUPPORTED"
   | "TASK_NOT_FOUND"
@@ -36,4 +37,11 @@ export function toRelayError(error: unknown): RelayError {
   if (error instanceof RelayError) return error;
   const message = error instanceof Error ? error.message : String(error);
   return new RelayError("INTERNAL", message);
+}
+
+const QUOTA_ERROR_PATTERN =
+  /\bquota\b|rate[ -]?limit|resource[ _-]?exhausted|usage[ -]?limit|too many requests|\b429\b/i;
+
+export function isQuotaError(text: string | undefined): boolean {
+  return Boolean(text && QUOTA_ERROR_PATTERN.test(text));
 }

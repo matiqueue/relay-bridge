@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { closeSync, openSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { RelayConfig } from "../../config.js";
-import { RelayError } from "../../errors.js";
+import { isQuotaError, RelayError } from "../../errors.js";
 import { redact, truncate } from "../../security/redact.js";
 import { runCommand } from "../../util/process.js";
 import {
@@ -18,10 +18,24 @@ import {
   type RunSpec,
 } from "../types.js";
 import { parseAgyEventLine } from "./events.js";
-import { otherModels, parseEffortProbe, parseModelList, resolveAlias } from "./models.js";
+import { effortRank, otherModels, parseEffortProbe, parseModelList, resolveAlias } from "./models.js";
 import { buildSessionSettings } from "./policy.js";
 
 const AUTH_HINT = /auth|sign[ -]?in|log[ -]?in|credential|unauthori[sz]ed|401/i;
+
+const FALLBACK_ORDER: Readonly<Record<ModelAlias, readonly ModelAlias[]>> = {
+  carbon: ["neon", "hydrogen"],
+  neon: ["hydrogen", "carbon"],
+  hydrogen: ["neon", "carbon"],
+};
+
+function pickFallbackEffort(resolution: AliasResolution, requested: Effort) {
+  const exact = resolution.variants.find((v) => v.effort === requested);
+  if (exact) return exact;
+  const targetRank = effortRank(requested);
+  const notAbove = resolution.variants.filter((v) => effortRank(v.effort) <= targetRank);
+  return notAbove.at(-1) ?? resolution.variants[0];
+}
 
 /** Variables of the orchestrator's own environment that the delegated agent has no business seeing. */
 const HIDDEN_ENV = /^(CLAUDE|ANTHROPIC_|RELAY_BRIDGE_|MCP_|npm_)/;
@@ -105,6 +119,12 @@ export class AntigravityProvider implements AgentProvider {
           `The Antigravity CLI is not signed in. Run \`agy\` once in a terminal and sign in with your Google account. (${output})`,
         );
       }
+      if (isQuotaError(output)) {
+        throw new RelayError(
+          "QUOTA_EXHAUSTED",
+          `The Antigravity CLI hit a quota or rate limit (${output}). Wait for your quota to reset and try again.`,
+        );
+      }
       throw new RelayError("PROVIDER_UNAVAILABLE", `\`agy models\` failed (exit ${listed.exitCode}): ${output}`);
     }
     const models = parseModelList(listed.stdout);
@@ -154,10 +174,27 @@ export class AntigravityProvider implements AgentProvider {
     const description = await this.describe();
     const resolution = description.aliases[alias];
     if (!resolution.available) {
+      for (const fallbackAlias of FALLBACK_ORDER[alias]) {
+        const fallback = description.aliases[fallbackAlias];
+        const fallbackVariant = fallback.available ? pickFallbackEffort(fallback, effort) : undefined;
+        if (fallback.available && fallbackVariant) {
+          return {
+            alias: fallback.alias,
+            modelId: fallbackVariant.modelId,
+            label: fallbackVariant.label,
+            effort: fallbackVariant.effort,
+            fallbackFrom: {
+              alias,
+              effort,
+              reason: resolution.note ?? `Model "${alias}" is not available on the account.`,
+            },
+          };
+        }
+      }
       const available = MODEL_ALIASES.filter((a) => description.aliases[a].available);
       throw new RelayError(
         "MODEL_UNAVAILABLE",
-        `${resolution.note ?? `Model "${alias}" is not available.`} Relay Bridge does not fall back to another model. Available aliases: ${available.join(", ") || "none"}.`,
+        `${resolution.note ?? `Model "${alias}" is not available.`} Available aliases: ${available.join(", ") || "none"}.`,
         { alias, available },
       );
     }

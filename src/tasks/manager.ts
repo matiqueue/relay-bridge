@@ -3,7 +3,7 @@ import { mkdir, open, readFile, rename, rm, stat, writeFile } from "node:fs/prom
 import { homedir } from "node:os";
 import path from "node:path";
 import type { RelayConfig } from "../config.js";
-import { RelayError } from "../errors.js";
+import { isQuotaError, RelayError } from "../errors.js";
 import {
   addWorktree,
   addWorktreeForBranch,
@@ -342,7 +342,11 @@ export class TaskManager {
       outcome: undefined,
       report: undefined,
       verification: undefined,
-      warnings: [],
+      warnings: model.fallbackFrom
+        ? [
+            `Requested model "${model.fallbackFrom.alias}" (${model.fallbackFrom.effort}) was unavailable on the account; using "${model.alias}" (${model.effort}) instead.`,
+          ]
+        : [],
       continuations: 0,
       nextPrompt: undefined,
     };
@@ -441,7 +445,11 @@ export class TaskManager {
       outcome: undefined,
       report: undefined,
       verification: undefined,
-      warnings: [],
+      warnings: model.fallbackFrom
+        ? [
+            `Requested model "${model.fallbackFrom.alias}" (${model.fallbackFrom.effort}) was unavailable on the account; using "${model.alias}" (${model.effort}) instead.`,
+          ]
+        : [],
       continuations: 0,
       nextPrompt: undefined,
     };
@@ -766,23 +774,19 @@ export class TaskManager {
           ? `The agent's turn kept ending at commands the task's policy does not allow (${before.progress.permissionDenials.slice(-3).join("; ") || "a command that needed approval"}), and it never reported. Allow the command (RELAY_BRIDGE_EXTRA_ALLOW) or change the task.`
           : undefined;
       if (deniedError) status = "failed";
+      const rawError =
+        deniedError ||
+        result?.error ||
+        lastLines(stderr, 6) ||
+        `The agent exited with code ${String(entry.exit?.exitCode ?? "unknown")}.`;
+      const quotaExhausted = status === "failed" && isQuotaError(`${result?.error ?? ""} ${stderr}`);
       const outcome: TaskOutcome = {
         cliStatus: result?.status,
         finishedReason: result?.finishedReason,
         exitCode: entry.exit?.exitCode,
         signal: entry.exit?.signal,
-        error:
-          status === "completed"
-            ? undefined
-            : truncate(
-                redact(
-                  deniedError ||
-                    result?.error ||
-                    lastLines(stderr, 6) ||
-                    `The agent exited with code ${String(entry.exit?.exitCode ?? "unknown")}.`,
-                ),
-                2000,
-              ),
+        errorCode: quotaExhausted ? "QUOTA_EXHAUSTED" : undefined,
+        error: status === "completed" ? undefined : truncate(redact(rawError), 2000),
         response: result?.response ? truncate(redact(result.response), 20_000) : undefined,
         usage: result?.usage,
         durationSeconds: result?.durationSeconds,
@@ -800,6 +804,11 @@ export class TaskManager {
         r.report = report;
         r.verification = verification;
         if (result?.conversationId) r.conversationId = result.conversationId;
+        if (quotaExhausted) {
+          r.warnings.push(
+            "Antigravity quota or rate limit was exhausted during this run. Wait for quota to reset, lower concurrency or effort, or retry on a lighter available model (e.g. hydrogen) via request_task_revision.",
+          );
+        }
         if (status === "completed" && !report) {
           r.warnings.push("The agent finished without a structured report; its response text is in the outcome.");
         }
@@ -988,6 +997,7 @@ function emptyOutcome(partial: Partial<TaskOutcome>): TaskOutcome {
     finishedReason: undefined,
     exitCode: undefined,
     signal: undefined,
+    errorCode: undefined,
     error: undefined,
     response: undefined,
     usage: undefined,

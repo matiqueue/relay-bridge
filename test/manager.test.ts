@@ -182,22 +182,65 @@ describe("read-only tasks", () => {
 });
 
 describe("models", () => {
-  it("rejects an effort the model does not support and an alias the account lacks", async () => {
+  it("rejects an effort the model does not support and throws MODEL_UNAVAILABLE when no aliases exist", async () => {
     const repo = makeRepo();
     const { manager } = await harness();
     expect(
       await codeOf(() => manager.delegate(request({ workingDirectory: repo, model: "carbon", effort: "xhigh" }))),
     ).toBe("EFFORT_UNSUPPORTED");
-    const noCarbon = await harness(testConfig());
-    process.env.FAKE_AGY_NO_CARBON = "1";
+
+    const noModels = await harness(testConfig());
+    process.env.FAKE_AGY_NO_MODELS = "1";
     try {
       expect(
         await codeOf(() =>
-          noCarbon.manager.delegate(request({ workingDirectory: repo, model: "carbon", effort: "high" })),
+          noModels.manager.delegate(request({ workingDirectory: repo, model: "carbon", effort: "high" })),
         ),
       ).toBe("MODEL_UNAVAILABLE");
     } finally {
+      delete process.env.FAKE_AGY_NO_MODELS;
+    }
+  });
+
+  it("falls back to an available alias (e.g. hydrogen) when the requested alias is missing, with a warning", async () => {
+    const repo = makeRepo();
+
+    const onlyHydrogen = await harness(testConfig());
+    process.env.FAKE_AGY_ONLY_HYDROGEN = "1";
+    try {
+      const task = await onlyHydrogen.manager.delegate(
+        request({ workingDirectory: repo, model: "neon", effort: "high" }),
+      );
+      expect(task.model.alias).toBe("hydrogen");
+      expect(task.model.id).toBe("gemini-4-hydrogen-high");
+      expect(task.warnings.join(" ")).toMatch(/unavailable.*using "hydrogen"/i);
+      expect((await onlyHydrogen.manager.waitFor(task.id, 20)).status).toBe("completed");
+    } finally {
+      delete process.env.FAKE_AGY_ONLY_HYDROGEN;
+    }
+
+    const noCarbon = await harness(testConfig());
+    process.env.FAKE_AGY_NO_CARBON = "1";
+    try {
+      const task = await noCarbon.manager.delegate(
+        request({ workingDirectory: repo, model: "carbon", effort: "high" }),
+      );
+      expect(task.model.alias).toBe("neon");
+      expect(task.model.id).toBe("gemini-4-neon-high");
+      expect(task.warnings.join(" ")).toMatch(/Requested model "carbon".*using "neon"/);
+      expect((await noCarbon.manager.waitFor(task.id, 20)).status).toBe("completed");
+    } finally {
       delete process.env.FAKE_AGY_NO_CARBON;
+    }
+  });
+
+  it("surfaces QUOTA_EXHAUSTED when model discovery hits a quota limit", async () => {
+    const provider = new AntigravityProvider(testConfig());
+    process.env.FAKE_AGY_MODELS_FAIL = "quota";
+    try {
+      await expect(provider.describe({ refresh: true })).rejects.toMatchObject({ code: "QUOTA_EXHAUSTED" });
+    } finally {
+      delete process.env.FAKE_AGY_MODELS_FAIL;
     }
   });
 
@@ -280,6 +323,10 @@ describe("outcomes", () => {
     const done = await manager.waitFor(task.id, 20);
     expect(done.status).toBe(status);
     if (error) expect(done.outcome?.error).toMatch(error);
+    if (scenario === "fail") {
+      expect(done.outcome?.errorCode).toBe("QUOTA_EXHAUSTED");
+      expect(done.warnings.join(" ")).toMatch(/quota or rate limit was exhausted/i);
+    }
   });
 
   it("continues the conversation when a turn ends at a command headless mode had to deny", async () => {

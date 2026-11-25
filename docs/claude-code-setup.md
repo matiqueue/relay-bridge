@@ -72,6 +72,20 @@ draft pull requests to `dev`.
 
 Replace the last sentence with the project's own conventions.
 
+## 5. Optional: quick local usage stats (`!relay-stats`)
+
+`npm run stats` prints local usage views (`summary`, `tasks`/`sessions`, `models`, `projects`, `daily`, `full`, or a
+single `<task-id>`) straight from `~/.relay-bridge/tasks`, with composable time windows (`today`, `yesterday`, `24h`,
+`7d`, `2w`, `--since YYYY-MM-DD`) and filters (`-m`/`--model`, `-s`/`--status`, `-e`/`--effort`, `--mode`,
+`-p`/`--project`, `--sort`, `--limit`, `--json`). To run it from any Claude Code session with zero LLM tokens
+(`!relay-stats`, `!relay-stats sessions 7d`, `!relay-stats projects --sort tokens`), symlink the built CLI into a
+directory on your `PATH`, for example:
+
+```bash
+chmod +x ~/code/relay-bridge/dist/cli/stats.js
+ln -sf ~/code/relay-bridge/dist/cli/stats.js ~/.local/bin/relay-stats
+```
+
 ## Updating
 
 ```bash

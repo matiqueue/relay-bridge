@@ -6,7 +6,8 @@
   "license": "UNLICENSED",
   "type": "module",
   "bin": {
-    "relay-bridge": "dist/index.js"
+    "relay-bridge": "dist/index.js",
+    "relay-stats": "dist/cli/stats.js"
   },
   "main": "dist/index.js",
   "files": [
@@ -25,6 +26,7 @@
     "format:check": "prettier --check .",
     "check": "npm run format:check && npm run typecheck && npm run lint && npm run test && npm run build",
     "doctor": "node dist/cli/doctor.js",
+    "stats": "node dist/cli/stats.js",
     "skill:install": "node scripts/skill.mjs install",
     "skill:uninstall": "node scripts/skill.mjs uninstall",
     "labels": "node scripts/labels.mjs",
