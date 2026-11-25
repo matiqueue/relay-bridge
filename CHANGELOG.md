@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.1](https://github.com/matiqueue/relay-bridge/compare/relay-bridge-v0.2.0...relay-bridge-v0.2.1) (2026-11-25)
+
+
+### Features
+
+* **providers:** handle quota exhaustion and missing-alias fallback ([3027324](https://github.com/matiqueue/relay-bridge/commit/3027324692e84750a3d3ef3d06490ff1f1f3e7a8))
+* **tasks:** add relay-stats CLI for local usage breakdown ([5f56c72](https://github.com/matiqueue/relay-bridge/commit/5f56c722783f246067e460dd62f64f51136daf80))
+* **tasks:** expand relay-stats views and generalize CLI options ([35764fa](https://github.com/matiqueue/relay-bridge/commit/35764fa03e9b4b325265530405e955d7a7760cfb))
+
 ## [0.2.0](https://github.com/matiqueue/relay-bridge/compare/relay-bridge-v0.1.0...relay-bridge-v0.2.0) (2026-11-25)
 
 
